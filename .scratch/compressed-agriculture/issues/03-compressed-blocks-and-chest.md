@@ -14,7 +14,22 @@
 - [ ] 等级与形态由 Block 本身表达，**不存进 BlockEntity**
 - [ ] 每个压缩方块都有对应的 `CompressedBlockEntity`
 - [ ] 空手右键时方块不掉落异常、不崩溃
+- [ ] 破坏时按原版掉落自身（货仓数据随物品搬运在 `03b` 落地，本票不要求）
 - [ ] 挖掘速度与工具需求等同对应原版方块（泥土 / 草地 / 耕地）
+- [ ] 类结构（本票必须按此落地，09 依赖它做形态转换）：
+  ```java
+  public abstract class CompressedBlock extends Block {   // 携带 level
+      public int level();                                  // 1..9
+      public abstract CompressedForm form();               // DIRT / GRASS / FARMLAND
+  }
+  public class CompressedDirtBlock     extends CompressedBlock {}
+  public class CompressedGrassBlock    extends CompressedBlock {}
+  public class CompressedFarmlandBlock extends CompressedBlock {}  // 额外带 MOISTURE
+  ```
+- [ ] `CompressedFarmlandBlock` 必须携带 `BlockStateProperties.MOISTURE`（**与 `FarmBlock.MOISTURE` 同一个属性实例**），默认 0（ADR-0018：`CropBlock.getGrowthSpeed` 的注入会读它，没有就 `IllegalStateException`）。水合逻辑留给 09
+- [ ] **不要继承 `FarmBlock`**：`FarmBlock` 的 `randomTick` / `tick` / `fallOn` 会调 `turnToDirt` 把方块换成原版泥土，货仓直接丢。踩踏/水合由 09 自己实现
+- [ ] 一个 `BlockEntityType<CompressedBlockEntity>` 注册一次，validBlocks 包含全部 27 个方块
+- [ ] 1.21.1 的序列化签名是 `saveAdditional(CompoundTag, HolderLookup.Provider)` / `loadAdditional(CompoundTag, HolderLookup.Provider)`——**不是** plan §10 写的 `ValueOutput`/`ValueInput`（那是 1.21.2+）
 
 ### 货仓
 
@@ -34,10 +49,10 @@
 
 等级编码在 Block 里、不在 BE 里，但 05 和 07 都需要「从某个位置的方块读出 `L`」。本票必须提供这个出口，否则下游只能各自猜方法名。
 
-- [ ] 提供一个可被 05 / 07 调用的等级读取方法（静态工具或方块接口，二选一），签名把 `BlockState` 映射到 `L ∈ [1, 9]`
-- [ ] 对非压缩方块返回明确的「无等级」结果（例如 `OptionalInt.empty()` 或 0），不得抛异常
-- [ ] 该方法不读 BE、不读世界，只依赖 `BlockState`
-- [ ] 在票内写下最终选定的方法名与签名，供 05 / 07 直接引用
+- [ ] **契约已定死，不要改名**：`public static OptionalInt CompressedBlock.levelOf(BlockState state)`
+  - 压缩方块 → `OptionalInt.of(level)`；非压缩方块 → `OptionalInt.empty()`；`state == null` → `empty()`，不抛异常
+  - 只读 `BlockState`，不读 BE、不读世界
+- [ ] 同时提供实例方法 `public int level()`，供已经拿到方块实例的代码直接用
 
 ### 标签
 
@@ -45,30 +60,29 @@
 - [ ] `#compressedagriculture:compressible_saplings` 默认引用 `#minecraft:saplings`
 - [ ] `#compressedagriculture:mushrooms` 默认含红蘑菇、褐蘑菇
 - [ ] `#compressedagriculture:melon_like_stems` 与 `#compressedagriculture:pumpkin_like_stems` 存在且默认为空
-- [ ] **9 个等级的压缩方块全部加入 `#minecraft:dirt`**（ADR-0010，瓜类路径的可行性前提）
+- [ ] **全部 27 个压缩方块（3 形态 × 9 等级）加入 `#minecraft:dirt`**（ADR-0010，瓜类路径的可行性前提；瓜类要求茎下方的**压缩耕地**在标签内，所以三形态都要进）
 - [ ] 注意：`#dirt` **只解决果实放置**（`StemBlock.java:93`），**不解决种植**（`StemBlock.java:77` 的 `mayPlaceOn` 只认 `Blocks.FARMLAND`，不读标签）。种植由 ticket 07 的 Mixin 负责，本票不得因 ADR-0016 而删除 `#dirt` 条目
 
 ### ADR-0010 五条 `#dirt` 副作用逐条给结论
 
 加入 `#minecraft:dirt` 会让压缩方块凭空获得一堆原版行为。每一条必须在票里写下**接受**或**拦截**，以及理由：
 
-- [ ] 草蔓延：普通草方块是否会蔓延到压缩泥土上？压缩泥土会不会被普通草地覆盖？
-- [ ] 树苗 / 花能否直接在压缩方块上种植？这是想要的吗？
-- [ ] 僵尸踩踏 / 水冲：是否发生，是否接受？
-- [ ] 蘑菇可放置：**已验证与 `#dirt` 无关**。`MushroomBlock.mayPlaceOn` 是 `isSolidRender`，`canSurvive` 只看 `MUSHROOM_GROW_BLOCK` 或「光照 < 13 且 `isSolidRender`」。结论：加 `#dirt` 不影响蘑菇放置，无冲突
-- [ ] 锄头右键：**已验证不会发生**（`HoeItem.TILLABLES` 是硬编码方块表、不读标签），只需确认现状并记录「锄头 → 压缩耕地」需 09 显式实现
+**结论已核对源码并写死，实现时只需在票里保留这些结论，不要改判：**
 
-### 合成
-
-- [ ] 9 泥土 → 1 级压缩泥土（普通 JSON 配方）
-- [ ] 2–9 级的 9 合 1 配方：`chestCount` 用 `Math.addExact` 累加，超 `MAX_CHEST_COUNT` 时**配方不匹配**，内容物清空
+- [x] **草蔓延：不会发生，接受。** `SpreadingSnowyDirtBlock.randomTick` 的蔓延目标是 `getBlockState(pos).is(Blocks.DIRT)`——身份比较，压缩泥土不在其中。普通草地不会覆盖压缩泥土。压缩方块之间的草蔓延由 09 自己实现
+- [x] **树苗 / 花可在压缩方块上种植：接受，而且正是想要的。** `BushBlock.mayPlaceOn` 读 `BlockTags.DIRT`，压缩方块进 `#dirt` 后树苗/花/蘑菇可直接种在上面（ticket 05 依赖这一点）
+- [x] **僵尸踩踏 / 水冲：不会发生，接受。** 这两个行为属于 `FarmBlock` 的方法；本票的压缩耕地**不继承 `FarmBlock`**，因此不会被换成原版泥土。09 若要等价行为，在自己类里实现
+- [x] **蘑菇可放置：与 `#dirt` 无关，无冲突。** `MushroomBlock.mayPlaceOn` 走 `isSolidRender`，`canSurvive` 只看 `MUSHROOM_GROW_BLOCK` 或「光照 < 13 且 `isSolidRender`」
+- [x] **锄头右键：不会发生，接受。** `HoeItem.TILLABLES` 是硬编码方块表、不读标签；「锄头 → 压缩耕地」需 09 显式实现
 
 ### 玩家可见
 
 - [ ] 物品有正确的名称与 `default` 语言键，游戏里不显示 `block.compressedagriculture.xxx` 这类原始键名
+- [ ] 极简可见性：3 个 block model（泥土 / 草地 / 耕地各一，贴图直接复用原版 `minecraft:block/dirt` / `grass_block` / `farmland`）+ 27 个 blockstate JSON，避免方块渲染成紫黑格。**不做自定义贴图、不做等级外观区分**
 
 ## 备注
 
 - 形态之间的互转不在这张票里，留给 09。本票只要求三个形态各自能放下、能挖开
+- 合成配方已拆到 `03b-crafting-recipes.md`（9 泥土 → L1、2–9 级的自定义 9 合 1），本票不做配方
 - 扩容配方（`chestCount + 1`）留给 08，因为它是 GUI 的验收面
 - `#dirt` 副作用清单是**玩法验收**，不写自动化测试（spec 的 Seam 3 已说明），但必须留下书面结论

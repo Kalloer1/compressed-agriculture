@@ -33,7 +33,7 @@
 ### 结算与拆除
 
 - [ ] 逐位置 `Block.getDrops(state, serverLevel, pos, blockEntity, player, tool)` 取真实掉落
-- [ ] 掉落汇总后调 `settle`，`L` 取容器所在格的等级（用 ticket 03 提供的等级读取方法，不自己解析 Block）
+- [ ] 掉落汇总后调 `settle`，`L` 取容器所在格的等级（用 ticket 03 提供的`CompressedBlock.levelOf(BlockState)`，不自己解析 Block）
 - [ ] **单格树 / 蘑菇树：容器 = 树苗（或蘑菇）脚下那个压缩方块**
 - [ ] 2×2 巨树：容器按**西北 → 东北 → 西南 → 东南**取第一个存在的 BE（ADR-0004），不要求四格等级一致
 - [ ] `settle` 成功后所有枚举出的位置设为空气

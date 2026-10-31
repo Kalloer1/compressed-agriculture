@@ -10,6 +10,15 @@
 
 ## 验收标准
 
+### 种植与生长速度（ADR-0018）
+
+- [ ] Mixin 注入 `CropBlock.mayPlaceOn`：`instanceof CompressedFarmlandBlock` → 返回 true。不改写则小麦/胡萝卜/马铃薯/甜菜**根本种不下去**
+- [ ] Mixin 注入 `CropBlock.getGrowthSpeed`：压缩耕地按耕地参与计算（`is(Blocks.FARMLAND)` 的那处判断对压缩耕地返回 true，随后读 `MOISTURE`）
+- [ ] Mixin 注入 `PitcherCropBlock.mayPlaceOn`：同上（瓶子草不继承 `CropBlock`，需单独一点）
+- [ ] 判据一律 `instanceof CompressedFarmlandBlock`，不列方块 ID
+- [ ] 游戏内验证：压缩耕地能种小麦，未浇水时生长速度与普通耕地一致；普通耕地行为不受影响
+- [ ] 若 `getGrowthSpeed` 的注入在压缩耕地上抛 `IllegalStateException`，说明 03 的 `CompressedFarmlandBlock` 漏了 `MOISTURE` 属性——回去修 03，不要用 try/catch 绕过
+
 ### 识别
 
 - [ ] 可压缩作物 = 属于 `#compressedagriculture:compressible_crops`，**或**是 `CropBlock` 子类且 `isMaxAge(state) == true`。二者取**或**

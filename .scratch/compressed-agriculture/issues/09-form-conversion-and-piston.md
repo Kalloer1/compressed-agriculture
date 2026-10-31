@@ -37,3 +37,12 @@
 
 - 搬运代码的接口应该长这样：给定源 BE 和目标 BE（或目标方块），把 27 格 + `chestCount` 搬过去，然后两端都 `setChanged()`
 - 破坏掉落与 08 的「破坏前重试一次结算」是两件事，都在破坏路径上但顺序不同：先重试结算（可能写入新产出），再掉出货仓内容
+
+## Comments
+
+2026-10-31 · 预检补充（ADR-0018）
+
+- 草蔓延：原版 `SpreadingSnowyDirtBlock.randomTick` 只认 `is(Blocks.DIRT)`（身份比较），**不会**蔓延到压缩泥土；压缩方块之间的草蔓延由本票在 `randomTick` 里自己实现
+- 水合：`CompressedFarmlandBlock` 已带 `BlockStateProperties.MOISTURE`（默认 0），本票负责按 4 格内水源/降雨把 MOISTURE 提到 7，并把 `getGrowthSpeed` 的 3.0 倍率真正用起来
+- 僵尸踩踏 / 水流：压缩耕地不继承 `FarmBlock`，默认不会发生；若要等价行为，本票自己实现，且**不得**把方块替换成原版泥土（会丢货仓）
+- 锄头：`HoeItem.TILLABLES` 硬编码，压缩泥土 → 压缩耕地必须由本票显式挂右键处理

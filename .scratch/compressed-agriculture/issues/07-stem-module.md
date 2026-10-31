@@ -19,7 +19,7 @@
 - [ ] 方块 `instanceof StemBlock` 一律走本票路径，**不走普通作物路径**（ADR-0009）
 - [ ] 果实由 `StemBlock` 的 `fruit` 字段给出，**不硬编码**西瓜 / 南瓜
 - [ ] 支持通过 `#compressedagriculture:melon_like_stems` 与 `#compressedagriculture:pumpkin_like_stems` 接入模组茎
-- [ ] `L` 取茎下方那个压缩耕地的等级（用 ticket 03 提供的等级读取方法）
+- [ ] `L` 取茎下方那个压缩耕地的等级（用 `CompressedBlock.levelOf(BlockState)`）
 
 ### 自动收获
 
@@ -45,6 +45,10 @@
 
 - [ ] 压缩耕地上能正常种下西瓜种 / 南瓜种，茎能长到 `AGE=7`
 - [ ] 普通耕地上种瓜行为不受 Mixin 影响
+
+### 已接受的原版差异（ADR-0018）
+
+- [ ] `AttachedStemBlock.mayPlaceOn` 只认 `Blocks.FARMLAND`，压缩耕地上结果茎无法存活——**接受，不扩展**：本票的成功路径不产生 attached stem，正常玩法里不会出现
 
 ### 交叉验证
 
