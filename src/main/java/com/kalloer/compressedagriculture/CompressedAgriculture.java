@@ -7,6 +7,7 @@ import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.registry.ModBlocks;
 import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
 import com.kalloer.compressedagriculture.stem.StemModule;
+import com.kalloer.compressedagriculture.tree.TreeModule;
 import com.mojang.logging.LogUtils;
 
 import net.neoforged.bus.api.IEventBus;
@@ -16,6 +17,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.BonemealEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.BlockGrowFeatureEvent;
 import net.neoforged.neoforge.event.level.block.CropGrowEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -45,5 +47,10 @@ public class CompressedAgriculture {
 
         // 瓜类模块的手动兜底（ADR-0008）；自动收获在 StemBlockMixin 里，不走事件
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, StemModule::onRightClickBlock);
+
+        // 树木模块：生长事件只记录（不取消），本 tick 末尾再结算、拆除、回填（ADR-0014）
+        TreeModule treeModule = new TreeModule();
+        NeoForge.EVENT_BUS.addListener(BlockGrowFeatureEvent.class, treeModule::onBlockGrowFeature);
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, treeModule::onServerTick);
     }
 }
