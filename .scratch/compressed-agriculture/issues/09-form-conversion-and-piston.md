@@ -46,3 +46,8 @@
 - 水合：`CompressedFarmlandBlock` 已带 `BlockStateProperties.MOISTURE`（默认 0），本票负责按 4 格内水源/降雨把 MOISTURE 提到 7，并把 `getGrowthSpeed` 的 3.0 倍率真正用起来
 - 僵尸踩踏 / 水流：压缩耕地不继承 `FarmBlock`，默认不会发生；若要等价行为，本票自己实现，且**不得**把方块替换成原版泥土（会丢货仓）
 - 锄头：`HoeItem.TILLABLES` 硬编码，压缩泥土 → 压缩耕地必须由本票显式挂右键处理
+
+2026-10-31 · 03 完工后补记
+
+- **活塞会丢货仓**：`CompressedBlock` 的 `PushReaction` 是默认 `NORMAL`，推得动；但原版 `PistonMovingBlockEntity` 只搬方块状态不搬 BE 的 NBT，推一次货仓清空。本票必须在两条里选一条并写进票：① 搬数据（`clearData`/`setData` 或 `getUpdateTag` 路线）；② 改成 `PushReaction.BLOCK` 明确禁止推动。**不允许保持现状**
+- 形态转换与活塞迁移必须共用同一套 BE 搬运代码（ADR-0002）

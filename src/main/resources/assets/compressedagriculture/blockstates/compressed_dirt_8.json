@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "compressedagriculture:block/compressed_dirt"
+    }
+  }
+}

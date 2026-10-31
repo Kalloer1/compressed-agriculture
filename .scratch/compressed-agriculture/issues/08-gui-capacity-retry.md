@@ -41,3 +41,10 @@
 - 重试的验收场景：把货仓填满 → 作物长熟保持成熟态 → 打开界面取走一些 → 关闭界面 → 作物应被补收并重置幼苗
 - GUI 渲染本身无自动化测试价值（spec Seam 3），靠手动验证
 - 扩容配方放这里而不是 03，因为它是唯一能看见 `chestCount` 数值的地方
+
+## Comments
+
+2026-10-31 · 03 完工后补记
+
+- `CompressedBlockEntity` 目前**没有 `getUpdateTag`**，货仓数据不同步到客户端。GUI 要显示货仓内容，本票必须补上（或在打开 menu 时用 `CustomPacketPayload` 同步，二选一，在票里写明）
+- `chestCount` 的 GUI 展示依赖 `03b`（物品形态）先把 `chestCount` 带在物品上；本票开工前确认 03b 已完成

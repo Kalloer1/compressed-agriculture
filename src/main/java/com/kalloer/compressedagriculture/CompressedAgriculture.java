@@ -2,6 +2,9 @@ package com.kalloer.compressedagriculture;
 
 import org.slf4j.Logger;
 
+import com.kalloer.compressedagriculture.registry.ModBlockEntities;
+import com.kalloer.compressedagriculture.registry.ModBlocks;
+import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
 import com.mojang.logging.LogUtils;
 
 import net.neoforged.bus.api.IEventBus;
@@ -20,5 +23,11 @@ public class CompressedAgriculture {
     public CompressedAgriculture(IEventBus modEventBus, ModContainer modContainer) {
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        // 方块先于物品注册：方块物品的 supplier 在物品注册时要拿到已注册的方块实例
+        ModBlocks.BLOCKS.register(modEventBus);
+        ModBlocks.BLOCK_ITEMS.register(modEventBus);
+        ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
+        ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
     }
 }
