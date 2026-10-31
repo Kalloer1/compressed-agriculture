@@ -39,6 +39,9 @@ run/
 repo/
 !**/src/**/repo/
 
+### NeoGradle test JVM logs ###
+logs/
+
 ### Agent temp ###
 .agent_tmp/
 TMP/
