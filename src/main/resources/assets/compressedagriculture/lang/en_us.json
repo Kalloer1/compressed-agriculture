@@ -1,0 +1,11 @@
+{
+  "itemGroup.compressedagriculture": "Compressed Agriculture",
+
+  "compressedagriculture.configuration.title": "Compressed Agriculture Configs",
+  "compressedagriculture.configuration.section.compressedagriculture.common.toml": "Compressed Agriculture Configs",
+  "compressedagriculture.configuration.section.compressedagriculture.common.toml.title": "Compressed Agriculture Configs",
+  "compressedagriculture.configuration.items": "Item List",
+  "compressedagriculture.configuration.logDirtBlock": "Log Dirt Block",
+  "compressedagriculture.configuration.magicNumberIntroduction": "Magic Number Text",
+  "compressedagriculture.configuration.magicNumber": "Magic Number"
+}

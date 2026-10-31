@@ -1,0 +1,339 @@
+
+# 压缩农业系统 · 最终方案 v1.9.2
+
+平台：Minecraft 1.21.1 / NeoForge
+核心原则：能种什么、能收什么，由标签和方块行为决定，不由代码里的方块列表决定。
+
+---
+
+## 0. 总体原则
+
+一切“哪些方块”走标签或行为类，掉落清单走动态获取，代码中不出现任何具体作物/树苗/果实的方块 ID。
+
+| 模块 | 识别方式 | 掉落来源 |
+|---|---|---|
+| 普通作物 | `BlockTags.CROP` 标签 + `CropBlock` 回退 | 方块自身战利品表 |
+| 树苗 | `BlockTags.SAPLING` 标签 | 数据包 `tree_loot` JSON + 通用回退 |
+| 蘑菇 | `#compressedagriculture:mushrooms` | 方块自身 |
+| 瓜类茎 | `StemBlock` 类型检查 + 可选标签 | `StemBlock.fruit` 字段（Accessor Mixin） |
+
+---
+
+## 1. 标签体系
+
+### 1.1 `#compressedagriculture:compressible_crops`
+
+默认引用 `#minecraft:crop`。代码中使用 `BlockTags.CROP`。普通作物识别的第一优先级。
+
+### 1.2 `#compressedagriculture:compressible_saplings`
+
+默认引用 `#minecraft:saplings`。代码中使用 `BlockTags.SAPLING`，不出现任何树苗 ID。
+
+### 1.3 `#compressedagriculture:mushrooms`
+
+默认值：`minecraft:red_mushroom`、`minecraft:brown_mushroom`。模组蘑菇可自行加入。
+
+### 1.4 可选茎标签
+
+`#compressedagriculture:melon_like_stems` / `pumpkin_like_stems`，默认为空。仅作为非 `StemBlock` 茎的显式兼容入口，代码中不包含任何茎 ID。
+
+### 1.5 树木产物映射
+
+位置：`data/compressedagriculture/tree_loot/<sapling_registry_path>.json`。自带原版树种默认数据；模组树苗无映射时走通用回退。
+
+---
+
+## 2. 方块与等级
+
+27 个方块：3 形态（普通 / 压缩 / 压缩耕地）× 9 等级。BE 不持久化 `level`/`form`，从 Block 读取。
+
+---
+
+## 3. 合成与扩容
+
+- 9 泥土 → 1 级压缩泥土：普通 JSON。
+- 2–9 级：自定义 9 合 1，`chestCount` 使用 `Math.addExact` 累加，结果必须 ≤ `MAX_CHEST_COUNT`，超限配方不匹配；内容物清空。
+- 箱子扩容：`chestCount + 1`，仅当 `chestCount < MAX_CHEST_COUNT` 时可合成。
+- `MAX_CHEST_COUNT = 1_000_000_000L`。加载时 clamp 到 `[0, MAX]` 并 `setChanged()`。
+
+---
+
+## 4. 容器
+
+27 格，每格一种物品，`long` 计数。`stackLimit = 64 × (1 + chestCount)`。单槽策略：同物品优先同槽，否则空槽；多物品原子分配。`chestCount == 0` 时界面不可开，但收获仍写入，每格上限 64。无 `cropId` 字段；`counts[i] == 0` 时 `slotItems[i] = null`。
+
+---
+
+## 5. 普通作物收获
+
+### 5.1 识别
+
+一个方块被视为可压缩普通作物，当且仅当满足以下任一：
+
+1. 方块属于 `#compressedagriculture:compressible_crops`（默认 `#minecraft:crop`）；
+2. 方块是 `CropBlock`（或其子类），且当前 `isMaxAge(state)` 返回 true。
+
+条件 2 **不收**“任意 `BonemealableBlock` + `AGE_*`”。树苗、可可豆等虽实现 `BonemealableBlock` 且有 `AGE`，但由各自模块或原版路径处理，不进入普通作物结算。
+
+### 5.2 成熟判定
+
+若方块是 `CropBlock`：
+
+```java
+boolean mature = ((CropBlock) block).isMaxAge(state);
+```
+
+若方块不是 `CropBlock` 但属于 `compressible_crops` 标签，回退到 `AGE` 属性最大值判定：
+
+```java
+IntegerProperty ageProp = ...;
+int maxAge = Collections.max(ageProp.getPossibleValues());
+boolean mature = state.getValue(ageProp) == maxAge;
+```
+
+### 5.3 掉落获取
+
+```java
+LootParams.Builder builder = new LootParams.Builder(serverLevel)
+    .withParameter(LootContextParams.ORIGIN, pos)
+    .withParameter(LootContextParams.TOOL, tool)
+    .withOptionalParameter(LootContextParams.BLOCK_ENTITY, blockEntity);
+List<ItemStack> drops = state.getDrops(builder);
+```
+
+`tool` 取自触发来源（玩家主手 / 空手 `ItemStack.EMPTY`）；`BLOCK_ENTITY` 在方块实体存在时作为可选参数传入，保证依赖 BE 的模组作物掉落正确。掉落清单可能包含随机结果，尚未乘倍率。
+
+### 5.4 触发与去重（骨粉路径修正）
+
+成熟结算有**两条互不重叠的触发路径**，二者都汇入统一入口，由统一入口之外的**去重标记**保证同一株作物只结算一次。
+
+**路径 A：随机刻成熟 → `CropGrowEvent.Post`**
+
+监听 `CropGrowEvent.Post`。该事件仅在随机刻生长成功时触发。检测 `event.getNewState()` 是否成熟；成熟 → 调用统一入口。
+
+**路径 B：骨粉催熟至成熟 → `BonemealEvent` 后置检测**
+
+`BonemealEvent` 本身可取消，并可用 `setSuccessful(boolean)` 控制“骨粉是否被视为生效”。**不取消 `BonemealEvent`**，只让原版正常执行 `performBonemeal`。在事件返回之后，**同一监听器中立即检查**：
+
+1. 事件位置方块在骨粉前后是否从“未成熟”变为“成熟”；
+2. 若已成熟且尚未结算 → 调用统一入口。
+
+伪代码语义：
+
+```java
+@SubscribeEvent
+public void onBonemealPost(BonemealEvent event) {
+    if (event.isCanceled()) return;
+    BlockState before = event.getState();   // 事件携带的原始状态
+    // 原版 performBonemeal 在事件返回后执行；此处依赖事件线程模型，
+    // 若事件在 performBonemeal 之前触发，则在监听器末尾使用
+    // serverLevel.getBlockState(pos) 读取催熟后的状态。
+    BlockState after = event.getLevel().getBlockState(event.getPos());
+    if (isMatureCrop(after) && !isAlreadySettled(event.getPos())) {
+        settleCrop(after, event.getPos(), event.getLevel(), event.getPlayer());
+        resetToSeedling(event.getLevel(), event.getPos(), after);
+    }
+}
+```
+
+**关键约束**：`CropGrowEvent.Post` **不会**在骨粉催熟时触发——该事件限定于随机刻生长成功。因此骨粉路径必须由 `BonemealEvent` 后置检测独立覆盖，不能依赖成熟事件。
+
+**路径 C：骨粉催熟但未到成熟**
+
+不结算，不重置；原版继续推进 age。
+
+**去重**：统一入口维护一个短期 `(Dimension, BlockPos)` 已结算集合（或使用方块状态外的轻量标记），在 `CropGrowEvent.Post` 和 `BonemealEvent` 后置检测之间共享。结算成功后清除标记。
+
+### 5.5 重置幼苗
+
+结算成功后：
+
+- `CropBlock` → 设置回 `age = 0`（通过 `getAgeProperty()` 构造 `state.setValue(ageProp, 0)`）；
+- 非 `CropBlock` 但属于 `compressible_crops` 标签 → 若方块有 `AGE` 属性，设置为 0；否则调用 `performBonemeal` 或保持原状并记录调试日志。
+
+### 5.6 失败语义
+
+- `INSUFFICIENT_SPACE`：不写入，不生成 `ItemEntity`，整体丢弃并**重置幼苗**（两条触发路径一致）。
+- `INVALID_INPUT`（掉落清单为空）：不写入、不重置，避免破坏空战利品表植株。
+
+---
+
+## 6. 树木收获
+
+### 6.1 识别
+
+完全依赖 `#compressedagriculture:compressible_saplings`（默认 `#minecraft:saplings`）。代码中使用 `BlockTags.SAPLING`，不出现任何具体树苗 ID。
+
+### 6.2 2x2 判定（基底探测修正）
+
+1. 事件 `pos` 必须是标签树苗。
+2. 原版 `SaplingBlock` 对 2x2 巨树的搜索顺序是东南 → 东北 → 西南 → 西北，只尝试第一个找到的 2x2 方格；生长基底检查**只检查西北角（northwestern-most，即最小 X、最小 Z）树苗下方那一格**。压缩农业不改变这一顺序与检查范围。
+3. 检查四格树苗是否同种：比较 `Block` 相同，不比较 ID 列表。
+4. **基底探测（与原版对齐）** ：检查西北角树苗下方那一格。若为压缩方块（压缩泥土/草地）且 BE 存在 → 压缩路径；若为普通泥土/草地 → 放行原版。**不检查另外三格**，因为原版生长判定不依赖它们。
+5. 压缩路径下容器选择：从西北角 BE 开始，按西北 → 东北 → 西南 → 东南（或保持原方案的锚点 → 东 → 南 → 东南）选择第一个 BE。容器选择顺序与生长判定分离，不要求所有压缩方块等级一致。
+6. 成功 → DENY 原版巨树生成 → 调用统一入口结算 → 重置四格树苗 `stage=0`。
+
+### 6.3 产物获取
+
+1. 优先读取 `data/compressedagriculture/tree_loot/<sapling_registry_path>.json`；
+2. 存在则按其中物品和基数 × `9^L` 结算；
+3. 不存在则通用回退：写入该树苗自身 1 个 + 木棍 0–2 个，× `9^L`，并记录一次调试日志。
+
+自带原版树种的 JSON 是数据，不是 Java 列表；整合包可覆盖或新增。
+
+### 6.4 反馈
+
+木质破坏音效 + 短时木屑/树叶粒子，位置在写入容器上方或 2x2 中心。无实际砍伐动作，不涉及工具耐久。
+
+---
+
+## 7. 瓜类收获
+
+### 7.1 茎识别
+
+```java
+blockState.getBlock() instanceof StemBlock
+```
+
+行为类检查，不是方块 ID 列表。可选标签 `#compressedagriculture:melon_like_stems` / `pumpkin_like_stems` 仅用于非 `StemBlock` 子类的显式兼容，默认为空。
+
+### 7.2 Mixin 注入
+
+在 `StemBlock` 生成结果方块的路径中注入，`randomTick` 和 `performBonemeal` 两条路径都要覆盖。
+
+判断条件：
+
+- 茎下方是压缩耕地，且 BE 存在；
+- `AGE == 7`；
+- 目标位置为空或可替换。
+
+成功：
+
+- 调用统一入口结算本次瓜类产物；
+- 取消结果方块放置；
+- 取消茎到 `AttachedStemBlock` 的转换；
+- 保留 `AGE=7`；
+- 播放反馈。
+
+失败（`INSUFFICIENT_SPACE`）：
+
+- 取消结果放置；
+- 取消转换；
+- 保留 `AGE=7`；
+- 不消耗茎、不生成结果；
+- 可选设置 20–40 tick 内部冷却。
+
+### 7.3 果实解析
+
+通过 Accessor Mixin 读取 `StemBlock` 的 `private final ResourceKey<Block> fruit` 字段：
+
+```java
+@Mixin(StemBlock.class)
+public interface StemBlockAccessor {
+    @Accessor("fruit")
+    ResourceKey<Block> compressedagriculture$getFruit();
+}
+```
+
+统一入口通过该 accessor 获取果实 `ResourceKey<Block>`，再以其 `ItemStack` 或果实战利品表作为产物。西瓜存西瓜方块，南瓜存南瓜方块，模组瓜类存其果实方块，语义统一，不出现任何果实 ID。
+
+### 7.4 骨粉与容器满
+
+骨粉不单独结算，只让原版推进。容器满时按 7.2 的失败语义处理：取消放置、保留茎、可选冷却。
+
+### 7.5 手动右键兜底
+
+玩家空手右键结果方块：
+
+1. 从结果方块四邻域按北、东、南、西顺序找匹配的茎（`StemBlock` 或标签茎），且茎下方为压缩耕地；
+2. 通过 Accessor 获取该茎的果实，作为写入清单；
+3. 原子空间检查；
+4. 足够 → 写入 → 移除结果方块，不移除茎；
+5. 不足 → 不移除，不写入。
+
+---
+
+## 8. 蘑菇
+
+识别使用 `#compressedagriculture:mushrooms`。
+
+扩散必须至少保留原版两条硬性条件：
+
+1. 光照等级 < 13（除非目标位置下方是菌丝、灰化土或菌岩）；
+2. 以原蘑菇为中心的 9×9×3 范围内，同种蘑菇数量少于 5 朵。
+
+不满足任一条件 → 不写入、不额外扩散。手动收获：破坏蘑菇时若下方是压缩草地，写入容器；否则放行原版。
+
+---
+
+## 9. 统一写入入口
+
+```text
+1. 调用方传入掉落清单 List<ItemStack>（已包含随机结果，尚未乘倍率）
+2. 每种物品 × 9^L，Math.multiplyExact
+3. 原子分配槽位，检查 stackLimit 剩余空间
+4. 任一不足 → INSUFFICIENT_SPACE，不写入
+5. 全部足够 → 写入 → setChanged() → SUCCESS
+6. 调用方仅在 SUCCESS 时执行成功状态处理
+```
+
+掉落清单来源：
+
+- 普通作物：`state.getDrops(...)`，`LootParams.Builder` 包含 `ORIGIN`、`TOOL`、可选 `BLOCK_ENTITY`；
+- 树木：`tree_loot` JSON 或通用回退；
+- 瓜类：Accessor 获取的 `fruit` 方块。
+
+统一入口本身不包含任何方块 ID 判断。
+
+---
+
+## 10. 数据结构
+
+```java
+class CompressedBlockEntity extends BlockEntity {
+    static final long MAX_CHEST_COUNT = 1_000_000_000L;
+    int schemaVersion = 1;
+    long chestCount;
+    ResourceLocation[] slotItems = new ResourceLocation[27];
+    long[] counts = new long[27];
+    // saveAdditional(ValueOutput) / loadAdditional(ValueInput)
+}
+```
+
+无 `cropId`。活塞迁移使用 `clearData` / `setData`，与 BE 持久化分开。
+
+---
+
+## 11. 任务拆分
+
+1. 注册 27 方块 + BE + `DataComponents`。
+2. 原版识别 Mixin：作物 → 压缩耕地；蘑菇 → 压缩草地；树苗 → 压缩泥土/草地。
+3. 注册标签：`compressible_crops`（默认 `#minecraft:crop`）、`compressible_saplings`（默认 `#minecraft:saplings`）、`mushrooms`、可选茎标签。
+4. 存储、加载校验、破坏 NBT 保留。
+5. 合成 + 扩容 + 9 合 1。
+6. GUI + `CustomPacketPayload`。
+7. 统一写入入口：接受动态掉落清单。
+8. 普通作物模块：**`CropGrowEvent.Post` 随机刻路径 + `BonemealEvent` 后置路径双触发；去重标记；`CropBlock.isMaxAge` 优先**。
+9. 树木模块：9a 标签识别 + `Block` 同种比较；**9b 基底探测只检查西北角**；9c `tree_loot` JSON + 通用回退。
+10. 瓜类模块：10a 反编译确认 `StemBlock` 两条路径；10b Mixin 成功/失败分支；10c Accessor Mixin 读取 `fruit`。
+11. 手动右键兜底。
+12. 蘑菇标签模块 + 光照 < 13、9×9×3 内 < 5 朵条件。
+13. 活塞 BE 迁移。
+14. 草蔓延/水合/形态转换。
+15. JEI/REI/EMI。
+16. 性能与安全验证。
+
+---
+
+## 12. 风险与边界
+
+- `BlockTags.CROP` 为单数常量名。
+- **骨粉催熟不触发 `CropGrowEvent.Post`**；普通作物成熟必须由 `BonemealEvent` 后置检测覆盖，不能只依赖成熟事件。
+- **2x2 巨树的原版基底检查只涉及西北角**；基底探测范围必须与此一致，否则容器选择会与原版生长判定错位。
+- `getDrops` 的 `LootParams.Builder` 应包含 `ORIGIN`、`TOOL` 和可选 `BLOCK_ENTITY`；`tool` 为 `ItemStack.EMPTY` 时时运不生效是预期行为。
+- 瓜类失败不消耗茎：`INSUFFICIENT_SPACE` 时取消放置与转换，保留 `AGE=7`，可选冷却避免 tick 风暴。
+- `StemBlock.fruit` 是 private，通过 `@Accessor` Mixin 读取，不硬编码果实 ID。
+- 蘑菇扩散必须检查光照 < 13 和 9×9×3 内同种 < 5 朵。
+- 模组树苗无 `tree_loot` 映射时通用回退为树苗自身 + 木棍，不崩溃、不静默无收获。
+- 非 `StemBlock` 的模组瓜类茎默认不识别；作者可通过可选标签显式兼容。
+- 树木无实际砍伐：无工具耐久，反馈为音效 + 粒子。
