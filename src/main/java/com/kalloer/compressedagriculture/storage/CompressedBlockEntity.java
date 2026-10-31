@@ -66,4 +66,25 @@ public class CompressedBlockEntity extends BlockEntity implements ChestTarget {
         // chestCount 已 clamp；加载阶段 level 还没挂上，setChanged() 此时是 no-op，挂上后才会真的通知世界
         setChanged();
     }
+
+    /**
+     * 把一个压缩方块的全部状态编码成 {@link CompoundTag}，供「物品形态」（ticket 03b）与
+     * 「活塞迁移 / 形态转换」（ticket 09）搬运。
+     *
+     * <p>直接转调 {@link BlockEntity#saveWithoutMetadata}，也就是走 {@link #saveAdditional}——搬运与存档共用同一套编码，
+     * 不存在第二份序列化代码。不带 {@code id} / {@code x} / {@code y} / {@code z}：那四个字段描述的是「存档里的哪个方块」，
+     * 搬进物品或另一个坐标就错了。
+     */
+    public static CompoundTag saveData(CompressedBlockEntity chest, HolderLookup.Provider registries) {
+        return chest.saveWithoutMetadata(registries);
+    }
+
+    /**
+     * {@link #saveData} 的逆操作：把 {@code tag} 整体覆盖到 {@code chest} 上（走 {@link #loadAdditional}）。
+     *
+     * <p>与存档读回是同一条路径，所以 {@code chestCount} 的 clamp 与坏格丢弃规则在这里同样生效。
+     */
+    public static void loadData(CompressedBlockEntity chest, CompoundTag tag, HolderLookup.Provider registries) {
+        chest.loadWithComponents(tag, registries);
+    }
 }
