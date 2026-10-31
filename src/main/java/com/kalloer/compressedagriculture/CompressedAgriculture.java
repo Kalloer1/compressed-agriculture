@@ -2,6 +2,7 @@ package com.kalloer.compressedagriculture;
 
 import org.slf4j.Logger;
 
+import com.kalloer.compressedagriculture.block.FormConversionModule;
 import com.kalloer.compressedagriculture.crop.CropModule;
 import com.kalloer.compressedagriculture.mushroom.MushroomModule;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
@@ -51,6 +52,10 @@ public class CompressedAgriculture {
 
         // 瓜类模块的手动兜底（ADR-0008）；自动收获在 StemBlockMixin 里，不走事件
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, StemModule::onRightClickBlock);
+
+        // 形态互转（ticket 09）：锄头把压缩泥土变压缩耕地、铲子把压缩草地/耕地变压缩泥土
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class,
+                FormConversionModule::onRightClickBlock);
 
         // 树木模块：生长事件只记录（不取消），本 tick 末尾再结算、拆除、回填（ADR-0014）
         TreeModule treeModule = new TreeModule();

@@ -7,6 +7,7 @@ import com.kalloer.compressedagriculture.CompressedAgriculture;
 import com.kalloer.compressedagriculture.block.CompressedBlock;
 import com.kalloer.compressedagriculture.block.CompressedDirtBlock;
 import com.kalloer.compressedagriculture.block.CompressedFarmlandBlock;
+import com.kalloer.compressedagriculture.block.CompressedForm;
 import com.kalloer.compressedagriculture.block.CompressedGrassBlock;
 
 import net.minecraft.world.level.block.Block;
@@ -45,6 +46,27 @@ public final class ModBlocks {
     public static final List<DeferredBlock<? extends CompressedBlock>> ALL_COMPRESSED = allCompressed();
 
     private ModBlocks() {}
+
+    /**
+     * 指定形态、指定等级的方块实例。形态与等级都来自 {@link CompressedBlock}，27 个方块全覆盖。
+     *
+     * <p>形态互转（ticket 09）靠它从「源方块的形态 + 等级」推出目标方块，代码里不出现任何具体方块 ID。
+     *
+     * @throws IllegalArgumentException 等级不在 {@code [MIN_LEVEL, MAX_LEVEL]} 内
+     */
+    public static Block block(CompressedForm form, int level) {
+        int index = level - CompressedBlock.MIN_LEVEL;
+        if (index < 0 || index >= CompressedBlock.MAX_LEVEL) {
+            throw new IllegalArgumentException(
+                    "level must be within [" + CompressedBlock.MIN_LEVEL + ", " + CompressedBlock.MAX_LEVEL
+                            + "], but was " + level);
+        }
+        return switch (form) {
+            case DIRT -> COMPRESSED_DIRT.get(index).get();
+            case GRASS -> COMPRESSED_GRASS.get(index).get();
+            case FARMLAND -> COMPRESSED_FARMLAND.get(index).get();
+        };
+    }
 
     /** 全部 27 个方块实例。只在方块注册完成后调用（BlockEntityType 注册时）。 */
     public static Block[] allBlocks() {
