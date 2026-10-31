@@ -78,3 +78,10 @@ ADR-0010 有一句：
 ## 未验证的延伸
 
 `mayPlaceOn` 的 Mixin 是否会影响其他继承 `StemBlock` 的模组方块，取决于那些方块是否覆写 `mayPlaceOn`。覆写过的不会走本注入。这属于兼容性风险，实现时记录，不在本 ADR 预设结论。
+
+## 修正（2026-10-31，`javap` 复核 NeoForge 21.1.235）
+
+`StemBlock.mayPlaceOn` 在 NeoForge 版里已经不是 `state.is(Blocks.FARMLAND)`，而是
+`state.getBlock() instanceof FarmBlock`。结论不变（压缩耕地不是 `FarmBlock` 子类，仍然为 false，Mixin 仍必需），
+但注入判据应按 `instanceof CompressedFarmlandBlock` 写，理由见 ADR-0018「证据 B」。
+`StemBlock.randomTick` 的 `instanceof FarmBlock || is(BlockTags.DIRT)` 未变，ADR-0010 的 `#dirt` 要求依然成立。

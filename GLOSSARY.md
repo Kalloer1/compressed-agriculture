@@ -45,7 +45,7 @@
 属于 `#compressedagriculture:compressible_crops`，或是 `CropBlock` 子类且 `isMaxAge(state) == true`。二者取或，不是取且。
 
 **可压缩树苗**（compressible sapling）
-属于 `#compressedagriculture:compressible_saplings`（默认引用 `#minecraft:saplings`）。代码中用 `BlockTags.SAPLING`。
+属于 `#compressedagriculture:compressible_saplings`（默认引用 `#minecraft:saplings`）。代码中用 `BlockTags.SAPLINGS`（复数）。
 
 **瓜类茎**（stem）
 `instanceof StemBlock` 的方块。其果实由 `StemBlock.fruit` 字段给出，不硬编码。

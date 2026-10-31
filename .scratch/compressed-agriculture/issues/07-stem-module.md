@@ -11,8 +11,9 @@
 ### 前提
 
 - [ ] 确认 03 已完成「9 个等级的压缩方块全部加入 `#minecraft:dirt`」（ADR-0010）。不满足则果实放置路径是死代码
-- [ ] 确认原版 `StemBlock.randomTick`（`StemBlock.java:93`）的 `FARMLAND || DIRT` 检查在压缩耕地上为 true
-- [ ] **确认 `StemBlock.mayPlaceOn`（`StemBlock.java:77`）已被本票的 Mixin 改写**（ADR-0016）。原版只认 `Blocks.FARMLAND`，不读标签；不改写则**瓜种根本种不下去**，后续全部代码永远不会执行
+- [ ] 确认原版 `StemBlock.randomTick`（`StemBlock.java:93`）的 `instanceof FarmBlock || is(BlockTags.DIRT)` 检查在压缩耕地上为 true（`#dirt` 已覆盖）
+- [ ] 生长速度不用另做：`StemBlock` 调的是 `CropBlock.getGrowthSpeed`，ticket 04 的两个 Redirect 已对压缩耕地生效
+- [ ] **确认 `StemBlock.mayPlaceOn`（`StemBlock.java:77`）已被本票的 Mixin 改写**（ADR-0016）。NeoForge 21.1.235 里它是 `state.getBlock() instanceof FarmBlock`（`javap` 已核）；压缩耕地不是 `FarmBlock` 子类，不改写则**瓜种根本种不下去**。注入写法与 ticket 04 的 `CropBlockMixin.mayPlaceOn` 完全一致，直接照抄
 
 ### 识别
 
