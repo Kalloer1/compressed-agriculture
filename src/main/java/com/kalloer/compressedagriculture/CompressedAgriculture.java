@@ -6,6 +6,7 @@ import com.kalloer.compressedagriculture.crop.CropModule;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.registry.ModBlocks;
 import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
+import com.kalloer.compressedagriculture.stem.StemModule;
 import com.mojang.logging.LogUtils;
 
 import net.neoforged.bus.api.IEventBus;
@@ -14,6 +15,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.BonemealEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.block.CropGrowEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -40,5 +42,8 @@ public class CompressedAgriculture {
         NeoForge.EVENT_BUS.addListener(CropGrowEvent.Post.class, cropModule::onCropGrow);
         NeoForge.EVENT_BUS.addListener(BonemealEvent.class, cropModule::onBonemeal);
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, cropModule::onServerTick);
+
+        // 瓜类模块的手动兜底（ADR-0008）；自动收获在 StemBlockMixin 里，不走事件
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, StemModule::onRightClickBlock);
     }
 }

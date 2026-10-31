@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "CropBlockMixin",
-    "PitcherCropBlockMixin"
+    "PitcherCropBlockMixin",
+    "StemBlockAccessor",
+    "StemBlockMixin"
   ],
   "injectors": {
     "defaultRequire": 1
