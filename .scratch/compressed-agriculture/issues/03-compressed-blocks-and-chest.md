@@ -20,6 +20,7 @@
 
 - [ ] 27 格，每格一种物品 + `long` 计数
 - [ ] `stackLimit = 64 × (1 + chestCount)`，全程 `long`
+- [ ] `MAX_CHEST_COUNT` 与 `stackLimit(long)` 从 ticket 02 的 `com.kalloer.compressedagriculture.settle.ChestCapacity` 引用，**BE 内不重新声明常量、不重写公式**（否则两处算术会分叉）
 - [ ] `chestCount == 0` 时每格上限 64
 - [ ] 序列化字段：`schemaVersion = 1`、`chestCount`（`long`）、`slotItems[27]`（`ResourceLocation`）、`counts[27]`（`long`）
 - [ ] **无 `cropId` 字段**
