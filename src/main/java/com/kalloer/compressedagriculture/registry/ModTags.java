@@ -42,6 +42,13 @@ public final class ModTags {
         public static final TagKey<Block> TREE_ROOTS = create("tree_roots");
 
         /**
+         * 蘑菇模块认的蘑菇集合，默认 {@code minecraft:red_mushroom} + {@code minecraft:brown_mushroom}（ADR-0013）。
+         *
+         * <p>整合包可以用数据包覆盖它来加入自定义蘑菇；代码里不出现任何具体蘑菇 ID。
+         */
+        public static final TagKey<Block> MUSHROOMS = create("mushrooms");
+
+        /**
          * 挂在树上的方块，默认空。命中的位置进 {@code attachments}，且不再从它继续扩散。
          *
          * <p>1.21.1 的 NeoForge 没有 {@code AllBlockTags.TREE_ATTACHMENTS}（那是 Create 的自有标签），所以本模组自建。

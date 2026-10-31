@@ -3,6 +3,7 @@ package com.kalloer.compressedagriculture;
 import org.slf4j.Logger;
 
 import com.kalloer.compressedagriculture.crop.CropModule;
+import com.kalloer.compressedagriculture.mushroom.MushroomModule;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.registry.ModBlocks;
 import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
@@ -17,6 +18,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.BonemealEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.BlockGrowFeatureEvent;
 import net.neoforged.neoforge.event.level.block.CropGrowEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -52,5 +54,11 @@ public class CompressedAgriculture {
         TreeModule treeModule = new TreeModule();
         NeoForge.EVENT_BUS.addListener(BlockGrowFeatureEvent.class, treeModule::onBlockGrowFeature);
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, treeModule::onServerTick);
+
+        // 蘑菇模块：同一个生长事件只记录（不取消），本 tick 末尾交给 TreeHarvest 拆蘑菇树；手动挖掘走兜底（ADR-0013）
+        MushroomModule mushroomModule = new MushroomModule();
+        NeoForge.EVENT_BUS.addListener(BlockGrowFeatureEvent.class, mushroomModule::onBlockGrowFeature);
+        NeoForge.EVENT_BUS.addListener(BlockEvent.BreakEvent.class, mushroomModule::onBlockBreak);
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, mushroomModule::onServerTick);
     }
 }
