@@ -7,6 +7,7 @@ import com.kalloer.compressedagriculture.mushroom.MushroomModule;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.registry.ModBlocks;
 import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
+import com.kalloer.compressedagriculture.registry.ModRecipes;
 import com.kalloer.compressedagriculture.stem.StemModule;
 import com.kalloer.compressedagriculture.tree.TreeModule;
 import com.mojang.logging.LogUtils;
@@ -40,6 +41,7 @@ public class CompressedAgriculture {
         ModBlocks.BLOCK_ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
+        ModRecipes.RECIPE_SERIALIZERS.register(modEventBus);
 
         // 普通作物模块：随机刻路径 + 骨粉路径（ADR-0001）
         CropModule cropModule = new CropModule();

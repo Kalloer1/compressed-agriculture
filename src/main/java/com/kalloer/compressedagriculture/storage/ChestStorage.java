@@ -33,8 +33,10 @@ public final class ChestStorage implements ChestTarget {
     /** 存档格式版本。 */
     public static final int SCHEMA_VERSION = 1;
 
+    /** 扩容档位的 tag 键。存档与物品形态（{@code BLOCK_ENTITY_DATA}）共用同一个键，读取方（如 9 合 1 配方）引用本常量。 */
+    public static final String TAG_CHEST_COUNT = "chestCount";
+
     private static final String TAG_SCHEMA_VERSION = "schemaVersion";
-    private static final String TAG_CHEST_COUNT = "chestCount";
     private static final String TAG_SLOT_ITEMS = "slotItems";
     private static final String TAG_COUNTS = "counts";
 
