@@ -10,8 +10,10 @@
 
 - [ ] `settle(drops, L, target)` 返回三值枚举 `SUCCESS` / `INSUFFICIENT_SPACE` / `INVALID_INPUT`
 - [ ] `ChestTarget` 提供 `capacityPerSlot()` / `tryReserve(item, amount)` / `commit()` / `rollback()` 三阶段契约（ADR-0005 要求全有或全无，而不是「写不进就回退已写的部分」）
+- [ ] **`settle` 用 `try/finally` 保证 `commit` 或 `rollback` 二选一必然发生**，任何异常路径都不留下未决的预留状态
+- [ ] `ChestTarget` 的契约文档写明：预留状态只在**单次 `settle` 调用内**有效，不跨调用存活
 - [ ] 测试侧有 `FakeChest` 内存实现，固定容量、记录写入，JUnit 直接可用
-- [ ] 工程已加 JUnit 依赖并能跑起来（模板 `build.gradle` 没有这项）
+- [ ] 工程能跑 `test` 任务。**先确认** NeoGradle 7.1.38 自带的 `testJunit` 任务链是否已够用（ticket 01 构建日志出现过 `writeMinecraftClasspathJunit` / `testJunit NO-SOURCE`），不够再加 `testImplementation`，不要照抄「模板没有 JUnit」的旧前提
 - [ ] 以下用例全绿：
   - [ ] 单物品 × `9^1` → `SUCCESS`，数量 ×9
   - [ ] 单物品 × `9^9` → `SUCCESS`，数量 387,420,489

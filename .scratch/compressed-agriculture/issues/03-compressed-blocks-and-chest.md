@@ -27,6 +27,16 @@
 - [ ] 加载时 `chestCount` clamp 到 `[0, MAX_CHEST_COUNT]` 并 `setChanged()`
 - [ ] 区块卸载再加载，货仓内容不丢
 - [ ] `CompressedBlockEntity` 实现 `ChestTarget`，使 `settle` 能直接写入真货仓
+- [ ] `tryReserve` 的预留状态**只在单次 `settle` 调用内有效**，不跨调用存活；未 commit 的预留不得影响后续结算
+
+### 等级读取出口契约（05 / 07 依赖）
+
+等级编码在 Block 里、不在 BE 里，但 05 和 07 都需要「从某个位置的方块读出 `L`」。本票必须提供这个出口，否则下游只能各自猜方法名。
+
+- [ ] 提供一个可被 05 / 07 调用的等级读取方法（静态工具或方块接口，二选一），签名把 `BlockState` 映射到 `L ∈ [1, 9]`
+- [ ] 对非压缩方块返回明确的「无等级」结果（例如 `OptionalInt.empty()` 或 0），不得抛异常
+- [ ] 该方法不读 BE、不读世界，只依赖 `BlockState`
+- [ ] 在票内写下最终选定的方法名与签名，供 05 / 07 直接引用
 
 ### 标签
 
@@ -35,6 +45,7 @@
 - [ ] `#compressedagriculture:mushrooms` 默认含红蘑菇、褐蘑菇
 - [ ] `#compressedagriculture:melon_like_stems` 与 `#compressedagriculture:pumpkin_like_stems` 存在且默认为空
 - [ ] **9 个等级的压缩方块全部加入 `#minecraft:dirt`**（ADR-0010，瓜类路径的可行性前提）
+- [ ] 注意：`#dirt` **只解决果实放置**（`StemBlock.java:93`），**不解决种植**（`StemBlock.java:77` 的 `mayPlaceOn` 只认 `Blocks.FARMLAND`，不读标签）。种植由 ticket 07 的 Mixin 负责，本票不得因 ADR-0016 而删除 `#dirt` 条目
 
 ### ADR-0010 五条 `#dirt` 副作用逐条给结论
 
@@ -43,7 +54,7 @@
 - [ ] 草蔓延：普通草方块是否会蔓延到压缩泥土上？压缩泥土会不会被普通草地覆盖？
 - [ ] 树苗 / 花能否直接在压缩方块上种植？这是想要的吗？
 - [ ] 僵尸踩踏 / 水冲：是否发生，是否接受？
-- [ ] 蘑菇可放置：与 06 的「下方是压缩草地」是否一致？
+- [ ] 蘑菇可放置：**已验证与 `#dirt` 无关**。`MushroomBlock.mayPlaceOn` 是 `isSolidRender`，`canSurvive` 只看 `MUSHROOM_GROW_BLOCK` 或「光照 < 13 且 `isSolidRender`」。结论：加 `#dirt` 不影响蘑菇放置，无冲突
 - [ ] 锄头右键：**已验证不会发生**（`HoeItem.TILLABLES` 是硬编码方块表、不读标签），只需确认现状并记录「锄头 → 压缩耕地」需 09 显式实现
 
 ### 合成
