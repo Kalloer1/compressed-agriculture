@@ -168,6 +168,16 @@ public class CompressedChestMenu extends AbstractContainerMenu {
         return this.data.get(DATA_CHEST_COUNT);
     }
 
+    /**
+     * 界面绑定的方块坐标，给 08b 的「关闭界面时重试结算」定位货仓。
+     *
+     * <p>客户端区块还没到时（{@link ChestLookup} 里 {@code chest} 为 {@code null}）返回 {@code null}，调用方跳过即可。
+     */
+    @Nullable
+    public BlockPos blockPos() {
+        return this.chest == null ? null : this.chest.getBlockPos();
+    }
+
     /** 货仓第 {@code storageSlot} 格的精确计数：槽里的展示栈封顶 64，界面的数字要读这里。 */
     public long countInSlot(int storageSlot) {
         if (storageSlot < 0 || storageSlot >= STORAGE_SLOTS) {

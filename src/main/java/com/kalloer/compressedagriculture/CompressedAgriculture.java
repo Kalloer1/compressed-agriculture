@@ -10,6 +10,7 @@ import com.kalloer.compressedagriculture.registry.ModBlocks;
 import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
 import com.kalloer.compressedagriculture.registry.ModMenus;
 import com.kalloer.compressedagriculture.registry.ModRecipes;
+import com.kalloer.compressedagriculture.retry.SettlementRetry;
 import com.kalloer.compressedagriculture.stem.StemModule;
 import com.kalloer.compressedagriculture.tree.TreeModule;
 import com.mojang.logging.LogUtils;
@@ -20,6 +21,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.BonemealEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.BlockGrowFeatureEvent;
@@ -51,6 +53,11 @@ public class CompressedAgriculture {
         NeoForge.EVENT_BUS.addListener(CropGrowEvent.Post.class, cropModule::onCropGrow);
         NeoForge.EVENT_BUS.addListener(BonemealEvent.class, cropModule::onBonemeal);
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, cropModule::onServerTick);
+
+        // 08b：三处重试时机（关闭界面 / 右键 / 破坏前），都是玩家主动动作，不做轮询（ADR-0005）
+        NeoForge.EVENT_BUS.addListener(PlayerContainerEvent.Close.class, SettlementRetry::onContainerClose);
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, SettlementRetry::onRightClickBlock);
+        NeoForge.EVENT_BUS.addListener(BlockEvent.BreakEvent.class, SettlementRetry::onBlockBreak);
 
         // 瓜类模块的手动兜底（ADR-0008）；自动收获在 StemBlockMixin 里，不走事件
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, StemModule::onRightClickBlock);

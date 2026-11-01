@@ -44,8 +44,8 @@ public final class CropModule {
     /** 本 tick 内被骨粉碰过、需要在这一 tick 末尾回看一次的位置。每 tick 无条件清空。 */
     private final Set<GlobalPosKey> pendingBonemeal = new HashSet<>();
 
-    /** INVALID_INPUT 的 WARN 限流表，与待观察集合分开维护（ADR-0007）。 */
-    private final WarnThrottle invalidInputWarn = new WarnThrottle();
+    /** INVALID_INPUT 的 WARN 限流表（ADR-0007）。静态：{@code trySettle} 是三处重试与两条触发路径共用的入口，不能再绑在实例上。 */
+    private static final WarnThrottle invalidInputWarn = new WarnThrottle();
 
     /** 路径 A：随机刻生长成功后立刻结算。 */
     public void onCropGrow(CropGrowEvent.Post event) {
@@ -98,8 +98,10 @@ public final class CropModule {
 
     /**
      * 一次结算尝试。作物不成熟、或脚下不是压缩方块（没有货仓）时直接放行原版行为。
+     *
+     * <p>公开：三处重试（{@code SettlementRetry}）与本模块的两条触发路径共用这一个入口，不另写一份。
      */
-    private void trySettle(ServerLevel level, BlockPos pos, BlockState state) {
+    public static void trySettle(ServerLevel level, BlockPos pos, BlockState state) {
         if (!CompressibleCrops.isCompressibleCrop(state) || !CompressibleCrops.isMature(state)) {
             return;
         }
@@ -152,9 +154,9 @@ public final class CropModule {
     }
 
     /** 掉落清单为空：永久卡住的症状，必须可诊断，所以是 WARN，并按位置限流（ADR-0007）。 */
-    private void warnInvalidInput(ServerLevel level, BlockPos pos, BlockState state) {
+    private static void warnInvalidInput(ServerLevel level, BlockPos pos, BlockState state) {
         GlobalPosKey key = GlobalPosKey.of(level.dimension(), pos);
-        if (!this.invalidInputWarn.shouldLog(key, level.getGameTime())) {
+        if (!invalidInputWarn.shouldLog(key, level.getGameTime())) {
             return;
         }
         CompressedAgriculture.LOGGER.warn(
