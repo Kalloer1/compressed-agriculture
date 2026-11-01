@@ -29,6 +29,8 @@
   "block.compressedagriculture.compressed_farmland_8": "Compressed Farmland (Lv.8)",
   "block.compressedagriculture.compressed_farmland_9": "Compressed Farmland (Lv.9)",
 
+  "container.compressedagriculture.compressed_chest": "Compressed Chest",
+
   "compressedagriculture.configuration.title": "Compressed Agriculture Configs",
   "compressedagriculture.configuration.section.compressedagriculture.common.toml": "Compressed Agriculture Configs",
   "compressedagriculture.configuration.section.compressedagriculture.common.toml.title": "Compressed Agriculture Configs",

@@ -8,6 +8,7 @@ import com.kalloer.compressedagriculture.mushroom.MushroomModule;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.registry.ModBlocks;
 import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
+import com.kalloer.compressedagriculture.registry.ModMenus;
 import com.kalloer.compressedagriculture.registry.ModRecipes;
 import com.kalloer.compressedagriculture.stem.StemModule;
 import com.kalloer.compressedagriculture.tree.TreeModule;
@@ -41,6 +42,7 @@ public class CompressedAgriculture {
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlocks.BLOCK_ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
+        ModMenus.MENU_TYPES.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         ModRecipes.RECIPE_SERIALIZERS.register(modEventBus);
 

@@ -153,6 +153,39 @@ public final class ChestStorage implements ChestTarget {
         return true;
     }
 
+    /**
+     * 从 {@code slot} 取出最多 {@code amount} 个物品，返回实际取出量（ticket 08 的界面取出）。
+     *
+     * <p>只扣已提交的内容，不碰预留：{@code amount} 超过该格现有量时只扣现有量；扣到 0 时该格同时满足
+     * 「{@code slotItems[slot] == null} 且 {@code counts[slot] == 0}」——03 定下的序列化约束（见 {@link #save}）。
+     *
+     * <p>越界槽位返回 0 而不是抛异常：槽位号来自客户端的点击包，玩家发来的坏包不能让服务端崩。
+     * 这与 {@link #itemInSlot} / {@link #countInSlot} 的抛异常语义不同，是有意的。
+     */
+    public long extract(int slot, long amount) {
+        if (slot < 0 || slot >= SLOT_COUNT || amount <= 0L) {
+            return 0L;
+        }
+
+        long stored = this.slotCounts[slot];
+        if (stored <= 0L) {
+            // 空格（或存档里数量为 0 的坏格）：顺手归一成 null / 0，不改别的状态
+            this.slotItems[slot] = null;
+            this.slotCounts[slot] = 0L;
+            return 0L;
+        }
+
+        long taken = Math.min(stored, amount);
+        long left = stored - taken;
+        if (left == 0L) {
+            this.slotItems[slot] = null;
+            this.slotCounts[slot] = 0L;
+        } else {
+            this.slotCounts[slot] = left;
+        }
+        return taken;
+    }
+
     @Override
     public void commit() {
         for (int slot = 0; slot < SLOT_COUNT; slot++) {

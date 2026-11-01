@@ -3,10 +3,16 @@ package com.kalloer.compressedagriculture.storage;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.settle.ChestTarget;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -57,6 +63,36 @@ public class CompressedBlockEntity extends BlockEntity implements ChestTarget {
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         this.storage.save(tag);
+    }
+
+    /**
+     * 客户端要显示货仓内容，所以区块包必须带上货仓数据（ticket 08 的同步方式①）。
+     *
+     * <p>用 {@link #saveWithoutMetadata} 当同步快照：与存档、物品形态（03b）、形态互转（09）是同一份编码，
+     * 不另写一套「同步用的 NBT」。不带 {@code id} / 坐标，因为客户端已经知道自己在加载哪个方块。
+     */
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
+    }
+
+    /** 方块已加载后再改内容时（界面取出）走这条增量包，靠 {@link #changedAndSync} 触发。 */
+    @Nullable
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /**
+     * 内容被改动后调：标脏存档，并把整份货仓数据推给客户端。
+     *
+     * <p>{@link #setChanged()} 只标脏区块，不发包；界面上取走物品后客户端要靠这一下刷新计数，否则显示会停在旧值。
+     */
+    public void changedAndSync() {
+        setChanged();
+        if (this.level != null && !this.level.isClientSide()) {
+            this.level.sendBlockUpdated(this.worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
     }
 
     @Override

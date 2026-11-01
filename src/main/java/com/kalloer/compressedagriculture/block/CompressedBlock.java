@@ -5,14 +5,22 @@ import java.util.OptionalInt;
 
 import javax.annotation.Nullable;
 
+import com.kalloer.compressedagriculture.menu.CompressedChestMenu;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.storage.CompressedBlockEntity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -20,6 +28,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -72,6 +81,52 @@ public abstract class CompressedBlock extends Block implements EntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new CompressedBlockEntity(pos, state);
+    }
+
+    /**
+     * 右键打开货仓界面（ticket 08）。
+     *
+     * <p>只有 {@code chestCount > 0}（已扩容）的方块才有界面：未扩容的方块每格只能存 64，界面没有意义，
+     * 而收获仍然照常写入（{@code settle} 不看 {@code chestCount}）。
+     *
+     * <p>打开界面走 {@code player.openMenu(provider, pos)}，不在 {@code RightClickBlock} 里自己 {@code setScreen}：
+     * 界面必须由服务端开、经标准包下发，客户端才能拿到 menu（08b 的关闭事件重试也依赖这一点）。
+     */
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+            BlockHitResult hit) {
+        if (!(level.getBlockEntity(pos) instanceof CompressedBlockEntity chest)
+                || chest.storage().chestCount() <= 0L) {
+            return InteractionResult.PASS;
+        }
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+        player.openMenu(new ChestMenuProvider(pos), pos);
+        return InteractionResult.SUCCESS;
+    }
+
+    /**
+     * 只为「把某个坐标上的货仓开给某个玩家」而存在的 provider。
+     *
+     * <p>menu 的构造需要坐标，而 {@link MenuProvider#createMenu} 只拿到玩家——所以坐标由本记录携带，
+     * 在 {@link #useWithoutItem} 里现场创建。方块本身实现 {@code MenuProvider} 拿不到坐标。
+     */
+    private record ChestMenuProvider(BlockPos pos) implements MenuProvider {
+        @Override
+        public Component getDisplayName() {
+            return Component.translatable("container.compressedagriculture.compressed_chest");
+        }
+
+        @Nullable
+        @Override
+        public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+            BlockEntity blockEntity = player.level().getBlockEntity(this.pos);
+            if (!(blockEntity instanceof CompressedBlockEntity chest)) {
+                return null;
+            }
+            return new CompressedChestMenu(containerId, inventory, chest);
+        }
     }
 
     /**
