@@ -42,6 +42,9 @@ repo/
 ### NeoGradle test JVM logs ###
 logs/
 
+### Optional viewer jars (JEI/REI/EMI) — see build.gradle ###
+libs/
+
 ### Agent temp ###
 .agent_tmp/
 TMP/

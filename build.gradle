@@ -95,7 +95,19 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+// JEI 联动：把 jei-1.21.1-neoforge-*.jar 放进 libs/ 才编译插件源码。
+// jar 不入库（见 .gitignore），缺省时 src/jei/java 不参与编译、构建照常成功——
+// 与「玩家没装 JEI 时模组照常启动」是同一件事的两面。
+def jeiJar = fileTree(dir: 'libs', include: 'jei-1.21.1-neoforge-*.jar').files.find { true }
+if (jeiJar != null) {
+    sourceSets.main.java.srcDir 'src/jei/java'
+}
+
 dependencies {
+    if (jeiJar != null) {
+        compileOnly files(jeiJar)
+    }
+
     // Specify the version of Minecraft to use.
     // Depending on the plugin applied there are several options. We will assume you applied the userdev plugin as shown above.
     // The group for userdev is net.neoforged, the module name is neoforge, and the version is the same as the neoforge version.
