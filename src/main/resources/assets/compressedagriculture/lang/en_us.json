@@ -31,6 +31,9 @@
 
   "container.compressedagriculture.compressed_chest": "Compressed Chest",
 
+  "jei.compressedagriculture.compressed_upgrade": "Compressed Block Upgrade",
+  "jei.compressedagriculture.compressed_expansion": "Compressed Chest Expansion",
+
   "compressedagriculture.configuration.title": "Compressed Agriculture Configs",
   "compressedagriculture.configuration.section.compressedagriculture.common.toml": "Compressed Agriculture Configs",
   "compressedagriculture.configuration.section.compressedagriculture.common.toml.title": "Compressed Agriculture Configs",
