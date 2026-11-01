@@ -58,6 +58,7 @@ JAVA_HOME=D:/tools/jdk21 GRADLE_USER_HOME=E:/mods/.gradle-home ./gradlew build
 - 决策记录：`docs/adr/0001`–`0019`
 - 方案：`docs/plan-v2.0.md`；spec：`.scratch/compressed-agriculture/spec.md`
 - 任务票：`.scratch/compressed-agriculture/issues/`（15 张，全部 done）
+- 手工验收清单：`docs/manual-checklist.md`（headless 环境验不了的游戏内行为）
 
 ## 授权
 
