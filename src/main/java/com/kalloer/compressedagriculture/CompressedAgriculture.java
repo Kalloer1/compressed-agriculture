@@ -12,6 +12,7 @@ import com.kalloer.compressedagriculture.registry.ModMenus;
 import com.kalloer.compressedagriculture.registry.ModRecipes;
 import com.kalloer.compressedagriculture.retry.SettlementRetry;
 import com.kalloer.compressedagriculture.stem.StemModule;
+import com.kalloer.compressedagriculture.topcut.TopCutModule;
 import com.kalloer.compressedagriculture.tree.TreeModule;
 import com.mojang.logging.LogUtils;
 
@@ -76,5 +77,8 @@ public class CompressedAgriculture {
         NeoForge.EVENT_BUS.addListener(BlockGrowFeatureEvent.class, mushroomModule::onBlockGrowFeature);
         NeoForge.EVENT_BUS.addListener(BlockEvent.BreakEvent.class, mushroomModule::onBlockBreak);
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, mushroomModule::onServerTick);
+
+        // 多格植物截顶（ADR-0021）：onPlace 里只记录，本 tick 末尾再拆第 2 格
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, TopCutModule.INSTANCE::onServerTick);
     }
 }

@@ -240,6 +240,16 @@ counts: long[27]
 - `@Accessor` Mixin 读取 `private final ResourceKey<Block> fruit`
 - 失败时保留 `AGE=7`、不消耗茎
 
+### 多格植物截顶
+
+压缩耕地上的多格植物（甘蔗 / 仙人掌 / 竹子）**只保留 1 格高度**（ADR-0021）。
+
+- **判定**：第 2 格与第 1 格是**同一方块**，第 1 格属于 `#compressedagriculture:multi_block_plants`，第 2 格下方 2 格是压缩耕地。同方块判定是必须的——树苗长成原木、蘑菇长成菌柄都是「不同方块」，不这样挡会直接把树木 / 蘑菇模块拆掉
+- **触发**：`BlockBehaviour#onPlace` 里只记录坐标（`LevelChunk.setBlockState` 对每次方块变更都会调它），`ServerTickEvent.Post` 统一结算与拆除。不在 `onPlace` 里当场动手，避免重入
+- **结算**：第 2 格的原版掉落 × `9^L` 写进脚下压缩耕地的货仓，然后只拆第 2 格，第 1 格保留
+- **停摆**：`INSUFFICIENT_SPACE` 时第 2 格原样保留，不拆不写，等玩家腾出空间
+- **已知副作用**：玩家手动往压缩耕地上堆第 2 格也会被拆走——「这块地上只保留 1 格」
+
 ### 标签
 
 按 §1：
@@ -251,7 +261,9 @@ counts: long[27]
 | `#compressedagriculture:mushrooms` | 红蘑菇、褐蘑菇 |
 | `#compressedagriculture:melon_like_stems` | 空 |
 | `#compressedagriculture:pumpkin_like_stems` | 空 |
-| `#minecraft:dirt` | **9 个等级的压缩方块全部加入** |
+| `#compressedagriculture:not_plantable_on_compressed_farmland` | 空（禁种表，ADR-0020） |
+| `#compressedagriculture:multi_block_plants` | 竹子、仙人掌、甘蔗（ADR-0021） |
+| `#minecraft:dirt` | **9 个等级的压缩泥土与压缩耕地全部加入** |
 
 代码中常量名是 `BlockTags.CROPS`（**复数**）、`BlockTags.SAPLINGS`。
 

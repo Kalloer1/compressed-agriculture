@@ -43,7 +43,16 @@
 掉落清单为空。语义为**不作处理**：不写入、不重置，避免破坏空战利品表植株。
 
 **统一入口**（unified entry）
-`settle(...)`。所有模块（普通作物 / 树木 / 瓜类 / 蘑菇 / 手动兜底）唯一允许的写入路径。
+`settle(...)`。所有模块（普通作物 / 树木 / 瓜类 / 蘑菇 / 截顶 / 紫颂循环 / 手动兜底）唯一允许的写入路径。
+
+**多格植物**（multi-block plant）
+靠自身随机刻在头顶逐格累加**同种**方块的植物，属于 `#compressedagriculture:multi_block_plants`。默认成员：竹子、仙人掌、甘蔗。紫颂不在此列（它长高时第 1、2 格是两种不同方块），树苗与蘑菇也不在（它们长出的是原木 / 菌柄，由树木 / 蘑菇模块接管）。
+
+**截顶**（top-cut）
+多格植物长到第 2 格时，拆掉第 2 格、产物乘 `9^L` 写进货仓的动作。只拆第 2 格，第 1 格保留继续下一轮。判定条件是「第 2 格与第 1 格同方块」+「第 1 格属于多格植物标签」+「第 2 格下方 2 格是压缩耕地」。
+
+**停摆**（stalled）
+货仓放不下截顶产物时，第 2 格原样保留、机器暂停，直到玩家腾出货仓空间。停摆时不拆方块、不写货仓、不重复刷日志。
 
 ## 识别
 
@@ -62,8 +71,7 @@
 **真实生成**（real generation）
 让原版自己生成一棵完整的树 / 蘑菇树。产物不来自手工表。
 
-**连通性枚举**（connectivity enumeration）
-从树苗位置向上找到树干，BFS 扩散把所有方块分成三类：`logs`（`BlockTags.LOGS` / `SLIMY_LOGS` / `MUSHROOM_STEM`）、`leaves`（任何有 `distance` 整数属性的方块；蘑菇块按固定半径红菇 2 / 褐菇 3）、`attachments`。思路取自 Create 的 `TreeCutter`。
+**连通性枚举**（connectivity enumeration）从树苗位置向上找到树干，BFS 扩散把所有方块分成三类：`logs`（`BlockTags.LOGS` / `SLIMY_LOGS` / `MUSHROOM_STEM`）、`leaves`（任何有 `distance` 整数属性的方块；蘑菇块按固定半径红菇 2 / 褐菇 3）、`attachments`。思路取自 Create 的 `TreeCutter`。
 
 **`validateCut`**
 防止把树的中段当成整棵拆掉的检查：看被砍位置上方是否还有不依附本层的原木。

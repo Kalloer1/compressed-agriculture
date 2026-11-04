@@ -14,6 +14,7 @@ Minecraft **1.21.1** / **NeoForge 21.1.235**。
 | 扩容 | 1 个压缩方块 + 8 铁锭 → 同一个方块，`chestCount + 1`（上限 10 亿） |
 | 界面 | 右键 `chestCount > 0` 的压缩方块打开；未扩容打不开但收获照常写入 |
 | 通用地基 | 压缩耕地什么都能种：下界疣、蘑菇、甘蔗、仙人掌、竹子、花、树苗、所有作物都活；例外可用禁种表排除 |
+| 多格植物 | 甘蔗 / 仙人掌 / 竹子在压缩耕地上**只留 1 格**，长到第 2 格自动截顶进货仓；货仓满则停摆 |
 | 合成 | 9 泥土 → L1；9 个同形态低一级方块 → 高一级（容量档位相加，内容清空） |
 
 ## 支持的收获
@@ -22,6 +23,7 @@ Minecraft **1.21.1** / **NeoForge 21.1.235**。
 - **树木**：树苗长成真实的树 → 连通性枚举 → 逐方块取真实掉落 → 整棵拆除 → 原地回填树苗
 - **瓜类**：西瓜 / 南瓜茎，果实直接进货仓、茎退回 0 龄
 - **蘑菇**：骨粉催成蘑菇树 → 整棵拆掉 → 回填同种蘑菇；手动挖蘑菇也收
+- **多格植物**：甘蔗 / 仙人掌 / 竹子在压缩耕地上只留 1 格，长到第 2 格就截顶
 
 ## 数据包可改的标签
 
@@ -33,6 +35,7 @@ Minecraft **1.21.1** / **NeoForge 21.1.235**。
 | `#compressedagriculture:melon_like_stems` / `pumpkin_like_stems` | 空（接模组茎） |
 | `#compressedagriculture:slimy_logs` / `tree_attachments` / `tree_roots` | 空 / 空 / `mangrove_roots` |
 | `#compressedagriculture:not_plantable_on_compressed_farmland` | 空（禁种表：列入的植物在压缩耕地上退回原版判断） |
+| `#compressedagriculture:multi_block_plants` | 竹子、仙人掌、甘蔗（多格植物：压缩耕地上只留 1 格） |
 
 代码里不出现任何具体作物 / 树苗 / 果实的方块 ID——能种什么、能收什么全由标签与方块行为决定。
 

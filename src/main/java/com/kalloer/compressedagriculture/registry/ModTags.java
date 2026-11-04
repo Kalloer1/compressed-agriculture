@@ -69,6 +69,14 @@ public final class ModTags {
         public static final TagKey<Block> NOT_PLANTABLE_ON_COMPRESSED_FARMLAND =
                 create("not_plantable_on_compressed_farmland");
 
+        /**
+         * 多格植物，默认 {@code minecraft:bamboo} + {@code minecraft:cactus} + {@code minecraft:sugar_cane}（ADR-0021）。
+         *
+         * <p>这些植物靠自身随机刻在头顶逐格累加<b>同种</b>方块；压缩耕地上只保留 1 格，长到第 2 格就被截顶。
+         * 紫颂不在这里（它走 ticket 14 的特例规则），树苗 / 蘑菇也不在——它们长出的是不同方块，由树木 / 蘑菇模块接管。
+         */
+        public static final TagKey<Block> MULTI_BLOCK_PLANTS = create("multi_block_plants");
+
         private Blocks() {}
 
         private static TagKey<Block> create(String name) {
