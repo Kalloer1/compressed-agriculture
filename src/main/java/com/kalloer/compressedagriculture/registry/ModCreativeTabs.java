@@ -12,7 +12,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * 创造模式标签页，装全部 27 个压缩方块——手工验收（放方块、挖方块、{@code /data get block} 看货仓）靠它取方块。
+ * 创造模式标签页，装全部 18 个压缩方块——手工验收（放方块、挖方块、{@code /data get block} 看货仓）靠它取方块。
  *
  * <p>标题键 {@code itemGroup.compressedagriculture} 已在 {@code lang/en_us.json} 里。
  */

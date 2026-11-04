@@ -57,9 +57,9 @@
 
 ## 2. 方块与等级
 
-27 个方块：3 形态（普通 / 压缩 / 压缩耕地）× 9 等级。BE 不持久化 `level`/`form`，从 Block 读取。
+18 个方块：2 形态（压缩泥土 / 压缩耕地）× 9 等级。BE 不持久化 `level`/`form`，从 Block 读取。
 
-**形态转换保留货仓内容。** 三种形态之间转换时，27 格数据（含 `chestCount`）原样带到新方块。理由：泥土 → 耕地是种地必经步骤，清空等于每次丢一次货；而「按形态过滤」需要一张物品表，正面撞 §0 核心原则（ADR-0002）。
+**形态转换保留货仓内容。** 两种形态之间转换时，27 格数据（含 `chestCount`）原样带到新方块。理由：泥土 → 耕地是种地必经步骤，清空等于每次丢一次货；而「按形态过滤」需要一张物品表，正面撞 §0 核心原则（ADR-0002）。
 
 ---
 
@@ -367,7 +367,7 @@ public interface StemBlockAccessor {
 
 ### 8.1 路径一（主要收益）：骨粉催蘑菇树
 
-1. 玩家对压缩草地上的蘑菇使用骨粉；
+1. 玩家对压缩耕地上的蘑菇使用骨粉；
 2. **不做任何拦截**，让原版 `performBonemeal` 正常执行 `growMushroom`；
 3. 蘑菇树生成完成后，按 §6.3 **同一套**连通性枚举逻辑（`mushroom_stem` 走 `isLog` 的 `MUSHROOM_STEM` 分支，蘑菇块走 `nonDecayingLeafDistance`）结算；
 4. `× 9^L` 写入容器；
@@ -389,11 +389,11 @@ public interface StemBlockAccessor {
 
 不满足任一条件 → 不写入、不额外扩散。
 
-**不加速、不限流。** 扩散速度是原版的平衡设计；加速会让蘑菇变成无限种子机，与「用面积换产量」的定位冲突。扩散出的新蘑菇可以在压缩草地上再次骨粉催熟，所以它是路径一的种子来源，不是独立收益。
+**不加速、不限流。** 扩散速度是原版的平衡设计；加速会让蘑菇变成无限种子机，与「用面积换产量」的定位冲突。扩散出的新蘑菇可以在压缩耕地上再次骨粉催熟，所以它是路径一的种子来源，不是独立收益。
 
 ### 8.3 手动收获
 
-破坏蘑菇时若下方是压缩草地，写入容器；否则放行原版。
+破坏蘑菇时若下方是压缩耕地，写入容器；否则放行原版。
 
 ### 8.4 可种植性（已验证）
 
@@ -405,7 +405,7 @@ protected boolean mayPlaceOn(BlockState state, BlockGetter level, BlockPos pos) 
 }
 ```
 
-靠 §1.5 的 `#minecraft:dirt` 天然满足，蘑菇可直接种在压缩草地上。
+靠 §1.5 的 `#minecraft:dirt` 天然满足，蘑菇可直接种在压缩耕地上。
 
 但另一条：`canSurvive` 的完整写法是
 
@@ -415,7 +415,7 @@ return below.is(BlockTags.MUSHROOM_GROW_BLOCK)
     : level.getRawBrightness(pos, 0) < 13 && this.mayPlaceOn(below, level, belowPos);
 ```
 
-`MUSHROOM_GROW_BLOCK` 只含 `mycelium` / `podzol` / `crimson_nylium` / `warped_nylium`，**压缩草地不在内**。因此压缩草地上的蘑菇**仍受光照 < 13 约束**，不享受菌丝特权。不把压缩草地加进去——它是草不是菌。
+`MUSHROOM_GROW_BLOCK` 只含 `mycelium` / `podzol` / `crimson_nylium` / `warped_nylium`，**压缩方块不在内**。因此压缩耕地上的蘑菇**仍受光照 < 13 约束**，不享受菌丝特权。不把压缩方块加进去——它是耕地不是菌土。
 
 ---
 
@@ -471,8 +471,8 @@ class CompressedBlockEntity extends BlockEntity {
 
 ## 11. 任务拆分
 
-1. 注册 27 方块 + BE + `DataComponents`。
-2. 原版识别 Mixin：作物 → 压缩耕地；蘑菇 → 压缩草地；树苗 → 压缩泥土/草地。
+1. 注册 18 方块 + BE + `DataComponents`。
+2. 原版识别 Mixin：作物 → 压缩耕地；蘑菇 → 压缩耕地；树苗 → 压缩泥土。
 3. 注册标签：`compressible_crops`（默认 `#minecraft:crops`）、`compressible_saplings`（默认 `#minecraft:saplings`）、`mushrooms`、可选茎标签，**以及把 9 个等级的压缩方块加入 `#minecraft:dirt`**。
 4. 存储、加载校验、破坏 NBT 保留。
 5. 合成 + 扩容 + 9 合 1。
@@ -499,7 +499,7 @@ class CompressedBlockEntity extends BlockEntity {
 - `getDrops` 的 `LootParams.Builder` 应包含 `ORIGIN`、`TOOL` 和可选 `BLOCK_ENTITY`；`tool` 为 `ItemStack.EMPTY` 时时运不生效是预期行为。
 - 瓜类失败不消耗茎：`INSUFFICIENT_SPACE` 时取消放置与转换，保留 `AGE=7`，可选冷却避免 tick 风暴。
 - `StemBlock.fruit` 是 private，通过 `@Accessor` Mixin 读取，不硬编码果实 ID。
-- 蘑菇扩散必须检查光照 < 13 和 9×9×3 内同种 < 5 朵；压缩草地不在 `MUSHROOM_GROW_BLOCK` 内，因此仍受光照约束。
+- 蘑菇扩散必须检查光照 < 13 和 9×9×3 内同种 < 5 朵；压缩方块不在 `MUSHROOM_GROW_BLOCK` 内，因此仍受光照约束。
 - **真实生成树 / 蘑菇树后必须彻底拆除包围盒**，否则残块会掉落成独立方块。
 - **树木枚举后必须回填树苗（单格一棵 / 2×2 四格），`STAGE = 0`**；不重置 `STAGE` 会导致无限加速循环。
 - **`L=9` 时 `9^9 = 387,420,489`**，`N × 9^9` 可能逼近 `MAX_CHEST_COUNT`（`1e9`），必须 `Math.multiplyExact` 并捕获溢出。

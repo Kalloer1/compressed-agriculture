@@ -62,7 +62,7 @@ public class CompressedAgriculture {
         // 瓜类模块的手动兜底（ADR-0008）；自动收获在 StemBlockMixin 里，不走事件
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, StemModule::onRightClickBlock);
 
-        // 形态互转（ticket 09）：锄头把压缩泥土变压缩耕地、铲子把压缩草地/耕地变压缩泥土
+        // 形态互转（ticket 09）：锄头把压缩泥土变压缩耕地、铲子把压缩耕地变压缩泥土
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class,
                 FormConversionModule::onRightClickBlock);
 

@@ -20,7 +20,7 @@ import net.neoforged.neoforge.common.util.TriState;
  *
  * <p>原版用身份比较认耕地（{@code state.getBlock() instanceof FarmBlock} / {@code state.is(Blocks.FARMLAND)}），
  * 压缩耕地是另一个 Block 实例，继承 {@code FarmBlock} 也不会命中，所以只能改字节码。判据一律
- * {@code instanceof CompressedFarmlandBlock}，27 个方块自动全部命中，不列方块 ID。
+ * {@code instanceof CompressedFarmlandBlock}，全部压缩耕地自动命中，不列方块 ID。
  *
  * <p><b>NeoForge 21.1.235 的实际代码与 ADR-0018 表格里记的不一样</b>（实测 {@code javap} 反编译 dev 运行期用的
  * {@code CropBlock.class}）：{@code mayPlaceOn} 已由 NeoForge 改成 {@code instanceof FarmBlock}；

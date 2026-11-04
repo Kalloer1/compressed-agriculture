@@ -27,11 +27,11 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
  * <ul>
  *   <li><b>锄头右键压缩泥土</b> → 同等级压缩耕地。原版 {@code HoeItem.TILLABLES} 是硬编码方块表、不读标签，
  *       压缩泥土永远不在表里，所以必须在这里显式接管。</li>
- *   <li><b>铲子右键压缩草地 / 压缩耕地</b> → 同等级压缩泥土。原版 {@code ShovelItem.FLATTENABLES} 同样是硬编码表，
- *       而且原版铲子产出的是 {@code DIRT_PATH}，与「三种形态」不符，所以也不复用。</li>
+ *   <li><b>铲子右键压缩耕地</b> → 同等级压缩泥土。原版 {@code ShovelItem.FLATTENABLES} 同样是硬编码表，
+ *       而且原版铲子产出的是 {@code DIRT_PATH}，与「两种形态」不符，所以也不复用。</li>
  * </ul>
  *
- * <p>压缩泥土 → 压缩草地由 {@link CompressedGrassBlock#randomTick} 的蔓延负责，不是工具操作。
+ * <p>只处理形态与等级都取自 {@link CompressedBlock} 的方块，代码里不出现任何具体方块 ID。
  *
  * <p>只在服务端动手：客户端让原版 {@code useOn} 走一遍空逻辑（返回 {@code PASS}），不需要预测，方块变化由服务端同步。
  */
@@ -42,7 +42,7 @@ public final class FormConversionModule {
      * {@code PlayerInteractEvent.RightClickBlock} 的处理入口。
      *
      * <p>命中时取消事件并回 {@link InteractionResult#SUCCESS}：转换已经做完，不能再让原版 {@code useOn} 处理一次
-     * （否则手持锄头右键压缩草地会同时触发原版「草方块 → 耕地」以外的逻辑，且耐久会被扣两次）。
+     * （否则手持锄头右键压缩泥土会同时触发原版 {@code useOn} 的逻辑，且耐久会被扣两次）。
      */
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (!(event.getLevel() instanceof ServerLevel level)) {

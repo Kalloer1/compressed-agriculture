@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 27 个压缩方块共用的 BlockEntity：只装货仓，不装等级、不装形态——那两样由方块本身表达。
+ * 18 个压缩方块共用的 BlockEntity：只装货仓，不装等级、不装形态——那两样由方块本身表达。
  *
  * <p>分工：{@link ChestStorage} 负责数据与三阶段契约，本类负责「存档 + 改动后通知世界」。
  * 实现 {@link ChestTarget} 是为了让 {@code settle} 直接把本对象当真货仓写入；{@link #commit()} 比

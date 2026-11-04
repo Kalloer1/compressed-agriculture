@@ -30,11 +30,11 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public class MushroomHarvestGameTest {
     private static final String TEMPLATE = "empty";
 
-    /** 红菇树长在 1 级压缩草地上 → 整棵变空气、原位回填一个红蘑菇、货仓里是 9 的倍数的红蘑菇。 */
+    /** 红菇树长在 1 级压缩泥土上 → 整棵变空气、原位回填一个红蘑菇、货仓里是 9 的倍数的红蘑菇。 */
     @GameTest(template = TEMPLATE)
     public void harvestsMushroomTreeIntoCompressedBlockAndRefillsMushroom(GameTestHelper helper) {
         BlockPos soilPos = new BlockPos(4, 1, 4);
-        helper.setBlock(soilPos, ModBlocks.COMPRESSED_GRASS.get(0).get());
+        helper.setBlock(soilPos, ModBlocks.COMPRESSED_DIRT.get(0).get());
         BlockPos base = soilPos.above();
         helper.setBlock(base, Blocks.MUSHROOM_STEM);
         helper.setBlock(base.above(), Blocks.MUSHROOM_STEM);
@@ -83,11 +83,11 @@ public class MushroomHarvestGameTest {
         helper.succeed();
     }
 
-    /** 手动兜底：挖掉压缩草地上的蘑菇 → 1 个蘑菇 × 9^1 进货仓，事件被取消（产物不落世界）。 */
+    /** 手动兜底：挖掉压缩泥土上的蘑菇 → 1 个蘑菇 × 9^1 进货仓，事件被取消（产物不落世界）。 */
     @GameTest(template = TEMPLATE)
     public void collectsManuallyBrokenMushroomAndCancelsBreak(GameTestHelper helper) {
         BlockPos soilPos = new BlockPos(4, 1, 4);
-        helper.setBlock(soilPos, ModBlocks.COMPRESSED_GRASS.get(0).get());
+        helper.setBlock(soilPos, ModBlocks.COMPRESSED_DIRT.get(0).get());
         BlockPos mushroomPos = soilPos.above();
         helper.setBlock(mushroomPos, Blocks.RED_MUSHROOM);
 

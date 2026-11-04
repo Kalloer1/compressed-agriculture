@@ -9,9 +9,9 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * 压缩方块的 BlockEntity 类型：只有一个，validBlocks 覆盖全部 27 个方块。
+ * 压缩方块的 BlockEntity 类型：只有一个，validBlocks 覆盖全部 18 个方块。
  *
- * <p>等级与形态不进 BlockEntity，所以不需要 27 个类型。
+ * <p>等级与形态不进 BlockEntity，所以不需要 18 个类型。
  */
 public final class ModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =

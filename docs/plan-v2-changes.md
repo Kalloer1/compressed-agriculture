@@ -126,7 +126,7 @@
 §8 整节重写为两条路径：
 
 > **路径一（主要收益）：骨粉催蘑菇树**
-> 1. 玩家对压缩草地上的蘑菇使用骨粉；
+> 1. 玩家对压缩耕地上的蘑菇使用骨粉；
 > 2. 不做拦截，让原版 `performBonemeal` 正常执行 `growMushroom`；
 > 3. 蘑菇树生成完成后，按 §6.3 同一套「记录方块 → 逐方块取掉落 → 拆除」逻辑结算；
 > 4. `× 9^L` 写入容器。
@@ -134,15 +134,15 @@
 > **路径二（种子来源）：随机扩散，仅保留原版约束**
 > 光照 < 13（除非下方是菌丝/灰化土/菌岩）、9×9×3 内同种 < 5 朵。不加速。
 >
-> **手动收获**：破坏蘑菇时若下方是压缩草地，写入容器。
+> **手动收获**：破坏蘑菇时若下方是压缩耕地，写入容器。
 
 §11.12 任务描述同步扩展。
 
 已验证事实：
 - 蘑菇树由 `mushroom_stem` + `red/brown_mushroom_block` 组成，红菇顶盖 5×5（`foliage_radius` 2），褐菇 7×7（半径 3），树高 `nextInt(3)+4` = 4–6，1/12 概率翻倍到 8–12。
 - 蘑菇方块**默认不掉自身**，普通破坏掉 `red/brown_mushroom` × 0–2。所以拆一棵蘑菇树 ≈ 几十个蘑菇物品。
-- `BushBlock.mayPlaceOn` 是 `is(BlockTags.DIRT) || is(Blocks.FARMLAND)` → 靠 A3 的 `#dirt` 天然满足，蘑菇可种在压缩草地上。
-- `MUSHROOM_GROW_BLOCK` 只含菌丝/灰化土/`crimson_nylium`/`warped_nylium`，压缩草地**不在内** → 压缩草地上的蘑菇仍受光照 < 13 约束。不把压缩草地加进去（它是草不是菌）。
+- `BushBlock.mayPlaceOn` 是 `is(BlockTags.DIRT) || is(Blocks.FARMLAND)` → 靠 A3 的 `#dirt` 天然满足，蘑菇可种在压缩耕地上。
+- `MUSHROOM_GROW_BLOCK` 只含菌丝/灰化土/`crimson_nylium`/`warped_nylium`，压缩方块**不在内** → 压缩耕地上的蘑菇仍受光照 < 13 约束。不把压缩方块加进去（它是耕地不是菌土）。
 
 ### B6 · `INVALID_INPUT` 用 WARN（ADR-0007）
 

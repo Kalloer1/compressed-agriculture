@@ -30,7 +30,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 /**
  * 合成配方的 GameTest（ticket 03c）。
  *
- * <p>全部断言都走 {@code RecipeManager}：既验证 25 个 JSON 能被加载成配方，也验证真实的「找配方」链路
+ * <p>全部断言都走 {@code RecipeManager}：既验证 17 个 JSON 能被加载成配方，也验证真实的「找配方」链路
  * （{@code getRecipeFor}）对这套输入给出 / 不给配方。不直接 new 配方对象，避免测的是构造器而不是数据。
  */
 @GameTestHolder(CompressedAgriculture.MODID)
@@ -113,10 +113,10 @@ public class CompressedUpgradeRecipeGameTest {
         helper.assertTrue(noRecipe(helper, inputOf(otherLevel)), "expected a level-2 input to match nothing");
 
         ItemStack[] otherForm = filledGrid(level1);
-        otherForm[2] = new ItemStack(ModBlocks.COMPRESSED_GRASS.get(0).get());
-        helper.assertTrue(noRecipe(helper, inputOf(otherForm)), "expected a grass input to match nothing");
+        otherForm[2] = new ItemStack(ModBlocks.COMPRESSED_FARMLAND.get(0).get());
+        helper.assertTrue(noRecipe(helper, inputOf(otherForm)), "expected a farmland input to match nothing");
 
-        // 9 个 L1 泥土不能合成压缩草地（三种形态各自独立成链）
+        // 9 个 L1 泥土不能合成压缩耕地（两种形态各自独立成链）
         ItemStack[] nineDirt = filledGrid(level1);
         CraftingInput input = inputOf(nineDirt);
         Optional<RecipeHolder<CraftingRecipe>> found = helper.getLevel().getRecipeManager()
@@ -140,11 +140,11 @@ public class CompressedUpgradeRecipeGameTest {
         helper.succeed();
     }
 
-    /** 24 个升级配方全部从数据包加载成功，且都是本模组的序列化器。 */
+    /** 16 个升级配方全部从数据包加载成功，且都是本模组的序列化器。 */
     @GameTest(template = TEMPLATE)
     public void allUpgradeRecipesLoaded(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        for (String form : List.of("dirt", "grass", "farmland")) {
+        for (String form : List.of("dirt", "farmland")) {
             for (int blockLevel = 2; blockLevel <= CompressedBlock.MAX_LEVEL; blockLevel++) {
                 ResourceLocation recipeId = id("compressed_" + form + "_" + blockLevel);
                 Optional<RecipeHolder<?>> holder = level.getRecipeManager().byKey(recipeId);

@@ -32,9 +32,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 27 个压缩方块的公共基类：只携带等级，形态由子类给出。
+ * 18 个压缩方块的公共基类：只携带等级，形态由子类给出。
  *
- * <p>等级与形态都编码在方块（Block）里，不进 BlockEntity——同一个 {@code BlockEntityType} 覆盖全部 27 个方块，
+ * <p>等级与形态都编码在方块（Block）里，不进 BlockEntity——同一个 {@code BlockEntityType} 覆盖全部 18 个方块，
  * BlockEntity 里只有货仓。
  *
  * <p>不继承 {@code FarmBlock}：它的 {@code randomTick} / {@code tick} / {@code fallOn} 会调 {@code turnToDirt}
@@ -132,7 +132,7 @@ public abstract class CompressedBlock extends Block implements EntityBlock {
     /**
      * 掉落时把货仓塞进掉落的方块物品（ticket 03b）：拆一块装了 3 亿份小麦的压缩耕地，东西跟着物品走。
      *
-     * <p>不靠 loot table：27 张表只掉自身，搬运由这段 Java 完成，以后加字段（新存档格式、新方块）不用改 27 个 JSON。
+     * <p>不靠 loot table：18 张表只掉自身，搬运由这段 Java 完成，以后加字段（新存档格式、新方块）不用改 18 个 JSON。
      * 只给<b>本方块自己的</b>物品加数据组件——表里如果有额外掉落（别的方块 / 工具产物）就原样返回。
      *
      * <p>编码用 {@link CompressedBlockEntity#saveData}，与存档同一套；外面套 {@link BlockItem#setBlockEntityData}，

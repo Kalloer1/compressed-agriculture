@@ -44,7 +44,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * </ul>
  *
  * <p>路径二（随机扩散）没有代码：不加速、不把压缩方块加进 {@code MUSHROOM_GROW_BLOCK}，
- * 压缩草地上的蘑菇因此仍受原版光照 < 13 与 9×9×3 内同种 < 5 朵的约束（ADR-0013）。
+ * 压缩耕地上的蘑菇因此仍受原版光照 < 13 与 9×9×3 内同种 < 5 朵的约束（ADR-0013）。
  */
 public final class MushroomModule {
     /** 本 tick 内被骨粉碰过、需要在这一 tick 末尾回看一次的蘑菇。每 tick 无条件清空。 */

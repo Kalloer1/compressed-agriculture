@@ -8,7 +8,6 @@ import com.kalloer.compressedagriculture.block.CompressedBlock;
 import com.kalloer.compressedagriculture.block.CompressedDirtBlock;
 import com.kalloer.compressedagriculture.block.CompressedFarmlandBlock;
 import com.kalloer.compressedagriculture.block.CompressedForm;
-import com.kalloer.compressedagriculture.block.CompressedGrassBlock;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -18,13 +17,13 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * 27 个压缩方块（3 形态 × 9 等级）与它们的方块物品。
+ * 18 个压缩方块（2 形态 × 9 等级）与它们的方块物品。
  *
- * <p>方块 ID 形如 {@code compressed_dirt_<level>} / {@code compressed_grass_<level>} /
- * {@code compressed_farmland_<level>}，等级从 1 起。三个 {@code List} 都按等级排序，下标 {@code level - 1}。
+ * <p>方块 ID 形如 {@code compressed_dirt_<level>} / {@code compressed_farmland_<level>}，等级从 1 起。
+ * 两个 {@code List} 都按等级排序，下标 {@code level - 1}。
  *
- * <p>方块属性照抄对应原版方块（{@code Blocks.DIRT} / {@code GRASS_BLOCK} / {@code FARMLAND}）：挖掘速度、工具需求、
- * 音效、地图颜色一致，活塞能推。原版这三个方块都<b>没有</b> {@code requiresCorrectToolForDrops()}（徒手也能挖出掉落物），
+ * <p>方块属性照抄对应原版方块（{@code Blocks.DIRT} / {@code FARMLAND}）：挖掘速度、工具需求、
+ * 音效、地图颜色一致，活塞能推。原版这两个方块都<b>没有</b> {@code requiresCorrectToolForDrops()}（徒手也能挖出掉落物），
  * 所以这里也不加。
  *
  * <p><b>已知风险</b>：{@code PushReaction} 是默认的 {@code NORMAL}，所以活塞推得动；但原版
@@ -38,17 +37,15 @@ public final class ModBlocks {
 
     /** 压缩泥土，下标 {@code level - 1}。 */
     public static final List<DeferredBlock<CompressedDirtBlock>> COMPRESSED_DIRT = registerDirt();
-    /** 压缩草地，下标 {@code level - 1}。 */
-    public static final List<DeferredBlock<CompressedGrassBlock>> COMPRESSED_GRASS = registerGrass();
     /** 压缩耕地，下标 {@code level - 1}。 */
     public static final List<DeferredBlock<CompressedFarmlandBlock>> COMPRESSED_FARMLAND = registerFarmland();
-    /** 全部 27 个，注册 BlockEntityType 的 validBlocks 与创造模式标签页用。 */
+    /** 全部 18 个，注册 BlockEntityType 的 validBlocks 与创造模式标签页用。 */
     public static final List<DeferredBlock<? extends CompressedBlock>> ALL_COMPRESSED = allCompressed();
 
     private ModBlocks() {}
 
     /**
-     * 指定形态、指定等级的方块实例。形态与等级都来自 {@link CompressedBlock}，27 个方块全覆盖。
+     * 指定形态、指定等级的方块实例。形态与等级都来自 {@link CompressedBlock}，18 个方块全覆盖。
      *
      * <p>形态互转（ticket 09）靠它从「源方块的形态 + 等级」推出目标方块，代码里不出现任何具体方块 ID。
      *
@@ -63,12 +60,11 @@ public final class ModBlocks {
         }
         return switch (form) {
             case DIRT -> COMPRESSED_DIRT.get(index).get();
-            case GRASS -> COMPRESSED_GRASS.get(index).get();
             case FARMLAND -> COMPRESSED_FARMLAND.get(index).get();
         };
     }
 
-    /** 全部 27 个方块实例。只在方块注册完成后调用（BlockEntityType 注册时）。 */
+    /** 全部 18 个方块实例。只在方块注册完成后调用（BlockEntityType 注册时）。 */
     public static Block[] allBlocks() {
         Block[] blocks = new Block[ALL_COMPRESSED.size()];
         for (int i = 0; i < blocks.length; i++) {
@@ -79,9 +75,8 @@ public final class ModBlocks {
 
     private static List<DeferredBlock<? extends CompressedBlock>> allCompressed() {
         List<DeferredBlock<? extends CompressedBlock>> blocks =
-                new ArrayList<>(3 * CompressedBlock.MAX_LEVEL);
+                new ArrayList<>(2 * CompressedBlock.MAX_LEVEL);
         blocks.addAll(COMPRESSED_DIRT);
-        blocks.addAll(COMPRESSED_GRASS);
         blocks.addAll(COMPRESSED_FARMLAND);
         return List.copyOf(blocks);
     }
@@ -90,14 +85,6 @@ public final class ModBlocks {
         List<DeferredBlock<CompressedDirtBlock>> blocks = new ArrayList<>(CompressedBlock.MAX_LEVEL);
         for (int level = CompressedBlock.MIN_LEVEL; level <= CompressedBlock.MAX_LEVEL; level++) {
             blocks.add(register("compressed_dirt_" + level, level, CompressedDirtBlock::new, dirtProperties()));
-        }
-        return List.copyOf(blocks);
-    }
-
-    private static List<DeferredBlock<CompressedGrassBlock>> registerGrass() {
-        List<DeferredBlock<CompressedGrassBlock>> blocks = new ArrayList<>(CompressedBlock.MAX_LEVEL);
-        for (int level = CompressedBlock.MIN_LEVEL; level <= CompressedBlock.MAX_LEVEL; level++) {
-            blocks.add(register("compressed_grass_" + level, level, CompressedGrassBlock::new, grassProperties()));
         }
         return List.copyOf(blocks);
     }
@@ -122,15 +109,6 @@ public final class ModBlocks {
     /** 照抄 {@code Blocks.DIRT}。 */
     private static BlockBehaviour.Properties dirtProperties() {
         return BlockBehaviour.Properties.of().mapColor(MapColor.DIRT).strength(0.5F).sound(SoundType.GRAVEL);
-    }
-
-    /** 照抄 {@code Blocks.GRASS_BLOCK}（含 {@code randomTicks}，ticket 09 的蔓延需要它）。 */
-    private static BlockBehaviour.Properties grassProperties() {
-        return BlockBehaviour.Properties.of()
-                .mapColor(MapColor.GRASS)
-                .randomTicks()
-                .strength(0.6F)
-                .sound(SoundType.GRASS);
     }
 
     /** 照抄 {@code Blocks.FARMLAND}（含 {@code randomTicks}，水合留给 ticket 09）。 */

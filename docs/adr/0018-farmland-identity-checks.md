@@ -29,7 +29,7 @@ state.is(Blocks.FARMLAND)   // 身份比较，压缩耕地永远为 false
 | `VillagerProfession.java:39` | `FARMER` 工作站集合含 `FARMLAND` | 村民不把压缩耕地当工作站 | **接受**：村民本来也不会在压缩耕地上种植 |
 | `HoeItem.java:29–33` `TILLABLES` | 硬编码五方块表 | 锄头不会把压缩泥土变耕地 | **接受**：由 ticket 09 显式实现「锄头 → 压缩耕地」 |
 
-另外核对：`SpreadingSnowyDirtBlock.randomTick` 的草蔓延目标是 `$$1.getBlockState($$6).is(Blocks.DIRT)`，**同样是身份比较**，所以普通草方块**不会**蔓延覆盖压缩泥土——ADR-0010 里「草蔓延」那条担心的情形实际不会发生，不需要拦截。压缩方块之间的草蔓延由 ticket 09 自己在 `randomTick` 里实现。
+另外核对：`SpreadingSnowyDirtBlock.randomTick` 的草蔓延目标是 `$$1.getBlockState($$6).is(Blocks.DIRT)`，**同样是身份比较**，所以普通草方块**不会**蔓延覆盖压缩泥土——ADR-0010 里「草蔓延」那条担心的情形实际不会发生，不需要拦截。
 
 ## 证据 B：NeoForge 21.1.235 的实际字节码（2026-10-31 用 `javap` 核对 dev 运行期类）
 
@@ -60,12 +60,12 @@ NeoForge 改写了其中几个方法，**注入点必须按实际字节码落，
 ## 理由
 
 - `is(Blocks.FARMLAND)` 是身份比较，没有任何标签/继承可以绕开；Mixin 是唯一可行手段（与 ADR-0016 同一逻辑）。
-- 判据用 `instanceof` 而不是方块 ID 列表，符合「代码里不出现具体方块 ID」的核心原则，也让 27 个方块（3 形态 × 9 等级）自动全部命中。
+- 判据用 `instanceof` 而不是方块 ID 列表，符合「代码里不出现具体方块 ID」的核心原则，也让 18 个方块（2 形态 × 9 等级）自动全部命中。
 - 先给压缩耕地 `MOISTURE` 属性，是为了让 `getGrowthSpeed` 的注入**安全**，而不是为了提前实现水合——两者解耦。
 
 ## 后果
 
-- ticket 03：`CompressedFarmlandBlock` 带 `MOISTURE` 状态属性（默认 0）；等级读取方法要能从三种形态的 `BlockState` 都读出 `L`。
+- ticket 03：`CompressedFarmlandBlock` 带 `MOISTURE` 状态属性（默认 0）；等级读取方法要能从两种形态的 `BlockState` 都读出 `L`。
 - ticket 04：新增三个 Mixin（`CropBlock.mayPlaceOn` / `CropBlock.getGrowthSpeed`（两个 Redirect）/ `PitcherCropBlock.mayPlaceOn`），并在游戏内验证「压缩耕地上能种小麦且生长速度与普通耕地一致（未浇水时）」。已实现（2026-10-31），`runServer` 确认两个 Mixin 成功 apply。
 - ticket 07：`StemBlock.mayPlaceOn` 的注入判据与本文一致，不再另立标准。
-- ticket 09：水合（`MOISTURE` 变化）、压缩方块之间的草蔓延、僵尸踩踏，都由 09 在自己的方块类里实现，不依赖原版 `FarmBlock`。
+- ticket 09：水合（`MOISTURE` 变化）、僵尸踩踏，都由 09 在自己的方块类里实现，不依赖原版 `FarmBlock`。

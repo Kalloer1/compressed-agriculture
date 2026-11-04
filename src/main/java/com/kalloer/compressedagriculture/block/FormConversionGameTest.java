@@ -19,10 +19,9 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * 形态互转 / 水合 / 草蔓延的 GameTest（ticket 09）。
+ * 形态互转 / 水合的 GameTest（ticket 09）。
  *
- * <p>三条用例对应票里的三条验收：货仓一字不差地跟着换形态、有水源就 {@code MOISTURE = 7}、草蔓延把相邻压缩泥土变成
- * 同等级压缩草地且不丢那一格的货仓。
+ * <p>两条用例对应票里的两条验收：货仓一字不差地跟着换形态、有水源就 {@code MOISTURE = 7}。
  */
 @GameTestHolder(CompressedAgriculture.MODID)
 @PrefixGameTestTemplate(false)
@@ -76,54 +75,6 @@ public class FormConversionGameTest {
         int moisture = level.getBlockState(absolute).getValue(CompressedFarmlandBlock.MOISTURE);
         helper.assertTrue(moisture == CompressedFarmlandBlock.MAX_MOISTURE,
                 "expected MOISTURE 7 after a random tick next to water, got " + moisture);
-        helper.succeed();
-    }
-
-    /**
-     * 压缩草地 + 相邻压缩泥土（带内容）→ 多次随机刻后相邻格变同等级压缩草地，货仓内容还在；
-     * 旁边那个<b>不同等级</b>的压缩泥土保持原样（蔓延不跨等级）。
-     */
-    @GameTest(template = TEMPLATE)
-    public void grassSpreadsOntoNeighbourKeepingChest(GameTestHelper helper) {
-        BlockPos grassPos = new BlockPos(4, 1, 4);
-        BlockPos dirtPos = grassPos.offset(-1, 0, 0);
-        BlockPos otherLevelPos = grassPos.offset(0, 0, -1);
-        helper.setBlock(grassPos, ModBlocks.COMPRESSED_GRASS.get(0).get());
-        helper.setBlock(dirtPos, ModBlocks.COMPRESSED_DIRT.get(0).get());
-        helper.setBlock(otherLevelPos, ModBlocks.COMPRESSED_DIRT.get(1).get());
-        // 亮度保险：GameTest 世界若被判定为不够亮，蔓延直接不发生
-        helper.setBlock(grassPos.above(3), Blocks.GLOWSTONE);
-
-        ServerLevel level = helper.getLevel();
-        BlockPos absoluteGrass = helper.absolutePos(grassPos);
-        BlockPos absoluteDirt = helper.absolutePos(dirtPos);
-        BlockPos absoluteOtherLevel = helper.absolutePos(otherLevelPos);
-
-        CompressedBlockEntity dirtChest = (CompressedBlockEntity) level.getBlockEntity(absoluteDirt);
-        dirtChest.storage().setChestCount(2);
-        dirtChest.storage().tryReserve(WHEAT, 300L);
-        dirtChest.storage().commit();
-        CompoundTag expected = CompressedBlockEntity.saveData(dirtChest, level.registryAccess());
-
-        BlockState grassState = level.getBlockState(absoluteGrass);
-        int ticks = 0;
-        while (level.getBlockState(absoluteDirt).is(ModBlocks.COMPRESSED_DIRT.get(0).get()) && ticks < 2000) {
-            grassState.randomTick(level, absoluteGrass, level.getRandom());
-            ticks++;
-        }
-
-        helper.assertTrue(level.getBlockState(absoluteDirt).is(ModBlocks.COMPRESSED_GRASS.get(0).get()),
-                "expected compressed grass of level 1 next to the source after " + ticks + " random ticks, got "
-                        + level.getBlockState(absoluteDirt));
-
-        CompressedBlockEntity spreadChest = (CompressedBlockEntity) level.getBlockEntity(absoluteDirt);
-        helper.assertTrue(spreadChest != null, "expected the covered block to keep its chest");
-        CompoundTag actual = CompressedBlockEntity.saveData(spreadChest, level.registryAccess());
-        helper.assertTrue(expected.equals(actual),
-                "expected the covered block to keep its chest data, expected=" + expected + " actual=" + actual);
-
-        helper.assertTrue(level.getBlockState(absoluteOtherLevel).is(ModBlocks.COMPRESSED_DIRT.get(1).get()),
-                "expected the level-2 compressed dirt to stay dirt, got " + level.getBlockState(absoluteOtherLevel));
         helper.succeed();
     }
 }

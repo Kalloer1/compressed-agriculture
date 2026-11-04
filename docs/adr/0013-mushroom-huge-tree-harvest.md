@@ -5,7 +5,7 @@
 
 ## 背景
 
-方案 §8 只描述了蘑菇的**扩散**（随机刻长出新蘑菇），以及「破坏蘑菇时若下方是压缩草地则写入容器」。讨论中曾质疑：「照原版约束的话，压缩农业对蘑菇没有任何增益，这个模块存在意义只剩自动收获」。
+方案 §8 只描述了蘑菇的**扩散**（随机刻长出新蘑菇），以及「破坏蘑菇时若下方是压缩耕地则写入容器」。讨论中曾质疑：「照原版约束的话，压缩农业对蘑菇没有任何增益，这个模块存在意义只剩自动收获」。
 
 这个质疑忽略了蘑菇模块的另一半：**骨粉把蘑菇催成一棵完整的蘑菇树**。
 
@@ -58,7 +58,7 @@ public boolean growMushroom(ServerLevel level, BlockPos pos, BlockState state, R
 
 ### 路径一：骨粉催蘑菇树（主要收益）
 
-1. 玩家对压缩草地上的蘑菇使用骨粉；
+1. 玩家对压缩耕地上的蘑菇使用骨粉；
 2. **不做任何拦截**，让原版 `performBonemeal` 正常执行 `growMushroom`；
 3. 蘑菇树生成完成后，按 ADR-0011 的同一套「记录这次生成了哪些方块 → 逐方块取真实掉落」逻辑结算；
 4. 拆除整棵蘑菇树，`× 9^L` 写入容器。
@@ -69,11 +69,11 @@ public boolean growMushroom(ServerLevel level, BlockPos pos, BlockState state, R
 
 蘑菇的随机刻扩散完全按原版：光照 < 13（除非下方是菌丝/灰化土/菌岩）、9×9×3 内同种 < 5 朵。不加速、不限流。
 
-扩散出的新蘑菇同样可以在压缩草地上被骨粉催成蘑菇树，所以这条路径是路径一的**种子来源**，不是独立收益。
+扩散出的新蘑菇同样可以在压缩耕地上被骨粉催成蘑菇树，所以这条路径是路径一的**种子来源**，不是独立收益。
 
 ### 手动收获
 
-破坏蘑菇时若下方是压缩草地，写入容器（§8 原文）。
+破坏蘑菇时若下方是压缩耕地，写入容器（§8 原文）。
 
 ## 为什么保留原版扩散约束
 
@@ -84,7 +84,7 @@ public boolean growMushroom(ServerLevel level, BlockPos pos, BlockState state, R
 
 - §8 必须重写：现在只写了扩散与手动收获，没有骨粉催蘑菇树这条主要收益路径。
 - §11.12 的任务描述需要从「蘑菇标签模块 + 光照/数量条件」扩展为「蘑菇标签 + 扩散约束 + 骨粉催树接管」。
-- 蘑菇下方的压缩方块必须是**压缩草地**（§8 原文），不是压缩泥土或压缩耕地。
+- 蘑菇下方的压缩方块必须是**压缩耕地**（ticket 12 的通用地基保证蘑菇在耕地上能活）。
 - **可种植性已验证**：`MushroomBlock extends BushBlock`，其 `canSurvive` 走 `BushBlock.mayPlaceOn`：
 
   ```java
@@ -103,6 +103,6 @@ public boolean growMushroom(ServerLevel level, BlockPos pos, BlockState state, R
       : level.getRawBrightness(pos, 0) < 13 && this.mayPlaceOn(below, level, belowPos);
   ```
 
-  `MUSHROOM_GROW_BLOCK` 只含 `mycelium` / `podzol` / `crimson_nylium` / `warped_nylium`，压缩草地不在其中。因此**压缩草地上的蘑菇仍受光照 < 13 约束**，不能像菌丝那样无视光照。若希望压缩草地等同于菌丝，需把它加入 `MUSHROOM_GROW_BLOCK`——**本 ADR 不这么做**，理由见下。
-- 不把压缩草地加进 `MUSHROOM_GROW_BLOCK`：那个标签的语义是「能无视光照长蘑菇的菌类土壤」。压缩草地是草地，视觉和语义上都不该获得菌丝特权。玩家想无视光照种蘑菇，把压缩草地放在菌丝旁边即可。
+  `MUSHROOM_GROW_BLOCK` 只含 `mycelium` / `podzol` / `crimson_nylium` / `warped_nylium`，压缩方块不在其中。因此**压缩耕地上的蘑菇仍受光照 < 13 约束**，不能像菌丝那样无视光照。若希望压缩耕地等同于菌丝，需把它加入 `MUSHROOM_GROW_BLOCK`——**本 ADR 不这么做**，理由见下。
+- 不把压缩方块加进 `MUSHROOM_GROW_BLOCK`：那个标签的语义是「能无视光照长蘑菇的菌类土壤」。压缩耕地是耕地，视觉和语义上都不该获得菌丝特权。玩家想无视光照种蘑菇，把压缩耕地放在菌丝旁边即可。
 - 蘑菇树的拆除必须干净：`mushroom_stem` 与顶盖方块都有 `HugeMushroomBlock` 的六面连接属性，拆一半会留下视觉残块。
