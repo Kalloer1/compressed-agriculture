@@ -13,6 +13,7 @@ Minecraft **1.21.1** / **NeoForge 21.1.235**。
 | 货仓 | 27 格，每格一种物品 + `long` 计数；每格上限 `64 × (1 + chestCount)` |
 | 扩容 | 1 个压缩方块 + 8 铁锭 → 同一个方块，`chestCount + 1`（上限 10 亿） |
 | 界面 | 右键 `chestCount > 0` 的压缩方块打开；未扩容打不开但收获照常写入 |
+| 通用地基 | 压缩耕地什么都能种：下界疣、蘑菇、甘蔗、仙人掌、竹子、花、树苗、所有作物都活；例外可用禁种表排除 |
 | 合成 | 9 泥土 → L1；9 个同形态低一级方块 → 高一级（容量档位相加，内容清空） |
 
 ## 支持的收获
@@ -31,6 +32,7 @@ Minecraft **1.21.1** / **NeoForge 21.1.235**。
 | `#compressedagriculture:mushrooms` | 红蘑菇、褐蘑菇 |
 | `#compressedagriculture:melon_like_stems` / `pumpkin_like_stems` | 空（接模组茎） |
 | `#compressedagriculture:slimy_logs` / `tree_attachments` / `tree_roots` | 空 / 空 / `mangrove_roots` |
+| `#compressedagriculture:not_plantable_on_compressed_farmland` | 空（禁种表：列入的植物在压缩耕地上退回原版判断） |
 
 代码里不出现任何具体作物 / 树苗 / 果实的方块 ID——能种什么、能收什么全由标签与方块行为决定。
 
@@ -55,7 +57,7 @@ JAVA_HOME=D:/tools/jdk21 GRADLE_USER_HOME=E:/mods/.gradle-home ./gradlew build
 ## 文档
 
 - 术语表：`GLOSSARY.md`（代码命名与注释统一用这套词）
-- 决策记录：`docs/adr/0001`–`0019`
+- 决策记录：`docs/adr/0001`–`0020`
 - 方案：`docs/plan-v2.0.md`；spec：`.scratch/compressed-agriculture/spec.md`
 - 任务票：`.scratch/compressed-agriculture/issues/`（15 张，全部 done）
 - 手工验收清单：`docs/manual-checklist.md`（headless 环境验不了的游戏内行为）

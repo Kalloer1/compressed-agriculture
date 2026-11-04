@@ -1,9 +1,11 @@
 package com.kalloer.compressedagriculture.block;
 
 import com.kalloer.compressedagriculture.registry.ModBlocks;
+import com.kalloer.compressedagriculture.registry.ModTags;
 import com.kalloer.compressedagriculture.storage.CompressedChestTransfer;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
@@ -22,6 +24,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.neoforge.common.util.TriState;
 
 /**
  * 压缩耕地。
@@ -71,6 +74,40 @@ public class CompressedFarmlandBlock extends CompressedBlock {
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
+    }
+
+    /**
+     * 通用地基（ADR-0020）：除了禁种表里的植物，任何植物都能在压缩耕地上活。
+     *
+     * <p>这是「通用地基」唯一的一处实现点。{@code Block} 已经 implements 了
+     * {@code IBlockExtension}，所以直接 override，不需要任何 mixin。原版植物的
+     * {@code canSurvive} 第一步都会问脚下这块地，拿到非 {@code DEFAULT} 就采纳、后面整段硬编码检查跳过：
+     * {@code CropBlock} / {@code BushBlock} 各在 {@code canSurvive} 第一行；{@code SugarCaneBlock}、
+     * {@code CactusBlock}（侧面检查之后）、{@code MushroomBlock}（{@code #mushroom_grow_block} 之后）、
+     * {@code BambooStalkBlock}、{@code ChorusFlowerBlock} 同理。
+     *
+     * <p><b>两个已知且已接受的副作用</b>：压缩耕地上的甘蔗<b>不需要临水</b>（原版要求下方是 {@code #dirt}/{@code #sand}
+     * 且水平相邻有水）；所有 {@code CropBlock} 在压缩耕地上<b>不因光照不足而弹掉</b>（原版要求光照 ≥ 8）。
+     * 注意「不弹掉」不等于「能长大」：{@code CropBlock.randomTick} 里还有一道独立的「光照 ≥ 9 才生长」检查，
+     * 它不在 {@code canSurvive} 里，所以黑暗地窖里的作物会一直停在幼苗。
+     *
+     * <p><b>不受影响的原版约束</b>：仙人掌的侧面检查（四邻不能是实心方块、不能有岩浆）发生在
+     * {@code canSustainPlant} 之前，所以旁边贴着实心方块时仙人掌照样弹掉。
+     *
+     * <p><b>禁种表</b>（{@code #compressedagriculture:not_plantable_on_compressed_farmland}，默认空）：命中的植物
+     * 方块返回 {@link TriState#DEFAULT}，交回原版判断。某个模组植物在这里行为崩坏时的逃生口。
+     *
+     * <p>注意 {@code #minecraft:dirt} 标签<b>仍然必须保留</b>：瓜类果实的落位判断是
+     * {@code blockstate.getBlock() instanceof FarmBlock || blockstate.is(BlockTags.DIRT)}（{@code StemBlock.randomTick}），
+     * 不读本方法。
+     */
+    @Override
+    public TriState canSustainPlant(BlockState state, BlockGetter level, BlockPos soilPosition, Direction facing,
+            BlockState plant) {
+        if (plant.is(ModTags.Blocks.NOT_PLANTABLE_ON_COMPRESSED_FARMLAND)) {
+            return TriState.DEFAULT;
+        }
+        return TriState.TRUE;
     }
 
     /**

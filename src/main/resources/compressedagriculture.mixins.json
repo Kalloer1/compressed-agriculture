@@ -6,7 +6,6 @@
     "CropBlockMixin",
     "PistonBaseBlockMixin",
     "PistonMovingBlockEntityMixin",
-    "PitcherCropBlockMixin",
     "StemBlockAccessor",
     "StemBlockMixin"
   ],

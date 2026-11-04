@@ -55,6 +55,15 @@ public final class ModTags {
          */
         public static final TagKey<Block> TREE_ATTACHMENTS = create("tree_attachments");
 
+        /**
+         * 禁种表，默认空。命中的植物方块在压缩耕地上退回原版判断（ADR-0020）。
+         *
+         * <p>压缩耕地是通用地基：{@code canSustainPlant} 对一切植物返回 {@code TRUE}。某个模组植物因此在压缩耕地上
+         * 行为崩坏时，把它写进这个标签即可退回原版约束，不需要改代码、不需要重编译。
+         */
+        public static final TagKey<Block> NOT_PLANTABLE_ON_COMPRESSED_FARMLAND =
+                create("not_plantable_on_compressed_farmland");
+
         private Blocks() {}
 
         private static TagKey<Block> create(String name) {

@@ -1,8 +1,14 @@
 # 0010 · 压缩耕地必须加入 `#minecraft:dirt` 标签，否则瓜类路径不成立
 
-- 状态：已采纳（2026-10-31）
+- 状态：已采纳（2026-10-31）；**结论不变，理由已修订**（ADR-0020，2026-11-04）
 - 影响面：§7.2 Mixin 注入、标签注册（§11.3）
 - 性质：**可行性前提**，不满足则整条瓜类路径是死代码
+
+> **后续修订（ADR-0020）**：本文下半部分推导出的「压缩耕地要在 `#minecraft:dirt` 里」依然成立，但**保留理由变了**。
+> 种植那一半已由 `CompressedFarmlandBlock.canSustainPlant` 接管，不再依赖本标签；本标签现在只为**瓜类果实落位**而留——
+> `StemBlock.randomTick` 的果实落位判断是
+> `blockstate.getBlock() instanceof FarmBlock || blockstate.is(BlockTags.DIRT)`（`StemBlock.java:93` 附近），
+> **它不读 `canSustainPlant`**，所以 `canSustainPlant` 再宽松也救不了它。
 
 ## 背景
 

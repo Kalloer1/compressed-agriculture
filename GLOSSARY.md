@@ -19,6 +19,12 @@
 **货仓扩容**（chestCount）
 货仓容量的扩容档位。`stackLimit = 64 × (1 + chestCount)`。上限 `MAX_CHEST_COUNT = 1_000_000_000L`。
 
+**通用地基**（universal substrate）
+压缩耕地的新角色：`canSustainPlant` 对未被禁种表排除的植物一律返回 TRUE，因此任何植物都能种在压缩耕地上并存活。代价是失去原版的部分地基约束（甘蔗不需要临水、作物不需要光照）。
+
+**禁种表**（not_plantable_on_compressed_farmland）
+`#compressedagriculture:not_plantable_on_compressed_farmland`，默认空。列入其中的植物方块在压缩耕地上会退回原版判断。用途：某个模组植物在耕地上行为崩坏时，用数据包一键关掉而不改代码。
+
 ## 收获
 
 **结算**（settle）
