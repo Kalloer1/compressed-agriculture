@@ -250,6 +250,17 @@ counts: long[27]
 - **停摆**：`INSUFFICIENT_SPACE` 时第 2 格原样保留，不拆不写，等玩家腾出空间
 - **已知副作用**：玩家手动往压缩耕地上堆第 2 格也会被拆走——「这块地上只保留 1 格」
 
+#### 例外：紫颂（ADR-0022）
+
+紫颂不能走上面的「同方块」规则：它长高时第 1 格变成 `chorus_plant`、第 2 格是 `chorus_flower`，**两种不同方块**。它走同一条管线（`onPlace` 记录 + tick 末处理）的单独一支：
+
+- **判定**：新方块是紫颂花、脚下那格是紫颂茎、脚下 2 格是带 BlockEntity 的压缩耕地。按方块**类型**判定（`ChorusFlowerBlock` / `ChorusPlantBlock`），不写方块 ID、不新建标签
+- **整株结算**：底座那格（`chorus_plant` → 紫颂果 0–1）和顶花那格（`chorus_flower` → 自身 1）都查战利品表，合并成一份清单 × `9^L`
+- **虚拟实体**：两次查询都带 `LootContextParams.THIS_ENTITY = FakePlayerFactory.getMinecraft(level)`。`chorus_flower` 的掉落表带 `entity_properties(entity = "this")` 条件，没有实体就恒为空清单 → `INVALID_INPUT` → 植株永久卡死
+- **回填**：`SUCCESS` 时把底座和顶花两格都设为空气，然后在**底座位置**回填一朵 `AGE = 0` 的紫颂花（先拆后填、不从产物里扣）。不置 0 会从收下来那朵的年龄继续，很快变成 `AGE = 5` 的死花
+- **停摆**：`INSUFFICIENT_SPACE` 时**整株**原样保留（不拆、不回填）；`INVALID_INPUT` 不拆不回填、WARN
+- **已知限制**：紫颂横向分枝不处理（分枝出的花悬空，不在第 2 格位置上）
+
 ### 标签
 
 按 §1：

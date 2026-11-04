@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.kalloer.compressedagriculture.CompressedAgriculture;
 import com.kalloer.compressedagriculture.block.CompressedBlock;
 import com.kalloer.compressedagriculture.block.CompressedFarmlandBlock;
@@ -20,16 +22,21 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChorusFlowerBlock;
+import net.minecraft.world.level.block.ChorusPlantBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BambooLeaves;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /**
@@ -45,8 +52,12 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <p><b>为什么必须「第 2 格与第 1 格是同一方块」</b>：树苗长成树时第 2 格是原木，与第 1 格不同方块，不判这一条
  * 就会把树干瞬间砍掉，与树木模块打架。同理，蘑菇长成蘑菇块也不是同一方块。
  *
- * <p><b>停摆</b>：货仓放不下截顶产物时，第 2 格原样保留、机器暂停，等玩家腾出货仓空间。WARN 每个坐标只打一次，
- * 拆除成功或状态变化后清除记录，所以同一处停摆不会每 tick 刷屏。
+ * <p><b>紫颂是这条规则的例外</b>（ADR-0022）：它长高时第 1 格变成 {@code chorus_plant}、第 2 格是
+ * {@code chorus_flower}——两种不同方块，同方块判定抓不到它。所以紫颂在这条管线上单开一支：整株（底座 + 顶花）
+ * 一起结算，然后在底座原位回填一朵 {@code AGE = 0} 的紫颂花，让循环继续。
+ *
+ * <p><b>停摆</b>：货仓放不下产物时，截顶那格原样保留（紫颂是整株保留：不拆、不回填）、机器暂停，等玩家腾出货仓空间。
+ * WARN 每个坐标只打一次，拆除成功或状态变化后清除记录，所以同一处停摆不会每 tick 刷屏。
  *
  * <p>集合是每 tick 清空的 {@code Set}，只由 {@code onPlace} 填充——本模块没有任何「每 tick 全图扫描」的逻辑。
  * 单例：注入点（Mixin 的静态上下文）与事件监听必须共用同一份集合。
@@ -78,7 +89,12 @@ public final class TopCutModule {
         if (!(level.getBlockState(pos.below(2)).getBlock() instanceof CompressedFarmlandBlock)) {
             return;
         }
-        if (level.getBlockState(pos.below()).getBlock() != placed.getBlock()) {
+        BlockState below = level.getBlockState(pos.below());
+        if (isGrownChorusFlower(placed, below)) {
+            INSTANCE.pending.add(GlobalPosKey.of(serverLevel.dimension(), pos));
+            return;
+        }
+        if (below.getBlock() != placed.getBlock()) {
             return;
         }
         if (!placed.is(ModTags.Blocks.MULTI_BLOCK_PLANTS)) {
@@ -108,17 +124,24 @@ public final class TopCutModule {
     }
 
     /**
-     * 一次截顶尝试。全部判定都重新读世界——记录时成立不代表现在成立（玩家可能已经拆了、植物可能已经弹掉）。
+     * 一次处理尝试。全部判定都重新读世界——记录时成立不代表现在成立（玩家可能已经拆了、植物可能已经弹掉）。
      *
-     * <p>三种结局：{@code SUCCESS} → 第 2 格设空气、第 1 格不动；{@code INSUFFICIENT_SPACE} → 第 2 格原样保留
+     * <p>两支：紫颂整株（{@link #harvestChorus}）与普通截顶。
+     *
+     * <p>普通截顶的三种结局：{@code SUCCESS} → 第 2 格设空气、第 1 格不动；{@code INSUFFICIENT_SPACE} → 第 2 格原样保留
      * （停摆）；{@code INVALID_INPUT} → 不写入、不拆除，记 WARN（ADR-0007）。
      */
     private void tryCut(ServerLevel level, BlockPos pos) {
         GlobalPosKey key = GlobalPosKey.of(level.dimension(), pos);
         BlockState second = level.getBlockState(pos);
+        BlockState first = level.getBlockState(pos.below());
         BlockState soil = level.getBlockState(pos.below(2));
-        if (!isSecondBlockOfMultiBlockPlant(second, level.getBlockState(pos.below()))
-                || !(soil.getBlock() instanceof CompressedFarmlandBlock)) {
+        boolean chorus = isGrownChorusFlower(second, first);
+        if (!chorus && !isSecondBlockOfMultiBlockPlant(second, first)) {
+            this.warned.remove(key);
+            return;
+        }
+        if (!(soil.getBlock() instanceof CompressedFarmlandBlock)) {
             this.warned.remove(key);
             return;
         }
@@ -136,7 +159,12 @@ public final class TopCutModule {
             return;
         }
 
-        switch (Settle.settle(collectDrops(level, pos, second), soilLevel.getAsInt(), chest)) {
+        if (chorus) {
+            harvestChorus(level, pos, second, first, soilLevel.getAsInt(), chest, key);
+            return;
+        }
+
+        switch (Settle.settle(collectDrops(level, pos, second, null), soilLevel.getAsInt(), chest)) {
             case SUCCESS -> {
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                 clearBambooLeaves(level, pos.below());
@@ -147,6 +175,44 @@ public final class TopCutModule {
         }
     }
 
+    /**
+     * 紫颂循环（ADR-0022）：整株（底座 + 顶花）一起结算，然后在底座原位回填一朵 {@code AGE = 0} 的紫颂花。
+     *
+     * <p>两次战利品表查询都带虚拟实体：{@code chorus_flower} 的掉落表带 {@code entity_properties(entity="this")}
+     * 条件，不带实体就恒为空清单，整个循环会断在 {@code INVALID_INPUT}。虚拟实体只用来让条件通过，不触发任何事件、
+     * 不做权限判断。
+     *
+     * <p>回填免费（不从产物里扣）且先拆后填：拆完再把花放回底座位置，新放的方块不会被自己的拆除逻辑命中。
+     * {@code AGE} 显式置 0——不置就会从刚收下那朵的年龄继续，影响下一轮生长节奏。
+     */
+    private void harvestChorus(ServerLevel level, BlockPos pos, BlockState flower, BlockState stem,
+            int soilLevel, CompressedBlockEntity chest, GlobalPosKey key) {
+        FakePlayer entity = FakePlayerFactory.getMinecraft(level);
+        List<DropEntry> drops = collectDrops(level, pos, flower, entity);
+        drops.addAll(collectDrops(level, pos.below(), stem, entity));
+
+        switch (Settle.settle(drops, soilLevel, chest)) {
+            case SUCCESS -> {
+                level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                level.setBlock(pos.below(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                level.setBlock(pos.below(), flower.setValue(ChorusFlowerBlock.AGE, 0), Block.UPDATE_ALL);
+                this.warned.remove(key);
+            }
+            case INSUFFICIENT_SPACE -> warnStalled(level, pos, flower, key);
+            case INVALID_INPUT -> warnEmptyDrops(level, pos, flower, key);
+        }
+    }
+
+    /**
+     * 「长高的紫颂」：第 2 格是紫颂花、第 1 格是紫颂茎。
+     *
+     * <p>按类型判定而不是方块 ID / 标签：这两个类本身就是原版给紫颂的专用类型，模组复用时自动生效，
+     * 代码里因此不出现任何具体方块 ID（GLOSSARY「核心原则」）。回填也用收下来那朵花的状态，不写死方块。
+     */
+    private static boolean isGrownChorusFlower(BlockState second, BlockState first) {
+        return second.getBlock() instanceof ChorusFlowerBlock && first.getBlock() instanceof ChorusPlantBlock;
+    }
+
     /** 「第 2 格是第 1 格的同种多格植物」。同方块这一条同时挡掉「树苗 → 树干」与「蘑菇 → 蘑菇块」。 */
     private static boolean isSecondBlockOfMultiBlockPlant(BlockState second, BlockState first) {
         return !second.isAir()
@@ -154,11 +220,18 @@ public final class TopCutModule {
                 && second.is(ModTags.Blocks.MULTI_BLOCK_PLANTS);
     }
 
-    /** 按第 2 格自己的原版战利品表取掉落，转成 {@code settle} 认识的「物品 ID + 数量」（ADR-0017）。 */
-    private static List<DropEntry> collectDrops(ServerLevel level, BlockPos pos, BlockState state) {
+    /**
+     * 按某个方块自己的原版战利品表取掉落，转成 {@code settle} 认识的「物品 ID + 数量」（ADR-0017）。
+     *
+     * <p>{@code entity} 为 {@code null} 时不注入虚拟实体，与原版「没有破坏者」的查询等价；紫颂花必须传，
+     * 见 {@link #harvestChorus}。
+     */
+    private static List<DropEntry> collectDrops(ServerLevel level, BlockPos pos, BlockState state,
+            @Nullable Entity entity) {
         List<ItemStack> stacks = state.getDrops(new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
                 .withParameter(LootContextParams.TOOL, ItemStack.EMPTY)
+                .withOptionalParameter(LootContextParams.THIS_ENTITY, entity)
                 .withOptionalParameter(LootContextParams.BLOCK_ENTITY, level.getBlockEntity(pos)));
 
         List<DropEntry> drops = new ArrayList<>(stacks.size());
