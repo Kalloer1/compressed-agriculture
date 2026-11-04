@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "BlockBehaviourOnPlaceMixin",
+    "CrafterBlockMixin",
     "CropBlockMixin",
+    "FeatureMixin",
     "PistonBaseBlockMixin",
     "PistonMovingBlockEntityMixin",
     "StemBlockAccessor",

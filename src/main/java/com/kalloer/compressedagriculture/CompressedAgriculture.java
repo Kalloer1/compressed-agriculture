@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import com.kalloer.compressedagriculture.block.FormConversionModule;
 import com.kalloer.compressedagriculture.crop.CropModule;
 import com.kalloer.compressedagriculture.mushroom.MushroomModule;
+import com.kalloer.compressedagriculture.recipe.ExpansionConsumptionHandler;
 import com.kalloer.compressedagriculture.registry.ModBlockEntities;
 import com.kalloer.compressedagriculture.registry.ModBlocks;
 import com.kalloer.compressedagriculture.registry.ModCreativeTabs;
@@ -12,6 +13,7 @@ import com.kalloer.compressedagriculture.registry.ModMenus;
 import com.kalloer.compressedagriculture.registry.ModRecipes;
 import com.kalloer.compressedagriculture.retry.SettlementRetry;
 import com.kalloer.compressedagriculture.stem.StemModule;
+import com.kalloer.compressedagriculture.storage.CompressedItemHandler;
 import com.kalloer.compressedagriculture.topcut.TopCutModule;
 import com.kalloer.compressedagriculture.tree.TreeModule;
 import com.mojang.logging.LogUtils;
@@ -20,9 +22,12 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.BonemealEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.BlockGrowFeatureEvent;
@@ -49,6 +54,9 @@ public class CompressedAgriculture {
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         ModRecipes.RECIPE_SERIALIZERS.register(modEventBus);
 
+        // 自动化抽取（ticket 11）：压缩方块的货仓对外暴露成 IItemHandler，漏斗 / 管道不开界面就能抽
+        modEventBus.addListener(RegisterCapabilitiesEvent.class, CompressedAgriculture::registerCapabilities);
+
         // 普通作物模块：随机刻路径 + 骨粉路径（ADR-0001）
         CropModule cropModule = new CropModule();
         NeoForge.EVENT_BUS.addListener(CropGrowEvent.Post.class, cropModule::onCropGrow);
@@ -67,6 +75,10 @@ public class CompressedAgriculture {
         NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class,
                 FormConversionModule::onRightClickBlock);
 
+        // 扩容配方的补扣（BUG3）：箱子按整格计入容量，而 onTake 每格只扣 1 个，差额在合成事件里补
+        NeoForge.EVENT_BUS.addListener(PlayerEvent.ItemCraftedEvent.class,
+                ExpansionConsumptionHandler::onItemCrafted);
+
         // 树木模块：生长事件只记录（不取消），本 tick 末尾再结算、拆除、回填（ADR-0014）
         TreeModule treeModule = new TreeModule();
         NeoForge.EVENT_BUS.addListener(BlockGrowFeatureEvent.class, treeModule::onBlockGrowFeature);
@@ -80,5 +92,16 @@ public class CompressedAgriculture {
 
         // 多格植物截顶（ADR-0021）：onPlace 里只记录，本 tick 末尾再拆第 2 格
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, TopCutModule.INSTANCE::onServerTick);
+    }
+
+    /**
+     * 给 18 个压缩方块共用的 BlockEntity 挂上物品处理器，让漏斗 / 管道不开界面就能抽。
+     *
+     * <p>不按边区分：18 个方块都是整块实体，没有「从上面只能进、从下面只能出」的朝向语义，六个面给同一个
+     * {@link CompressedItemHandler}。每次查询新建一个是故意的——适配器只是货仓的薄包装，不持状态，不需要缓存。
+     */
+    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.COMPRESSED.get(),
+                (chest, side) -> new CompressedItemHandler(chest));
     }
 }

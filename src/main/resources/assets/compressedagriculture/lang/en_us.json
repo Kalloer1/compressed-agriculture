@@ -24,6 +24,8 @@
 
   "jei.compressedagriculture.compressed_upgrade": "Compressed Block Upgrade",
   "jei.compressedagriculture.compressed_expansion": "Compressed Chest Expansion",
+  "jei.compressedagriculture.compressed_expansion.capacity": "Stack limit per slot: %s to %s (+64 per chest added)",
+  "jei.compressedagriculture.compressed_expansion.chests": "Any amount of chests — each chest raises the chest count by 1 (at least 1, up to %s stacks of 64)",
 
   "compressedagriculture.configuration.title": "Compressed Agriculture Configs",
   "compressedagriculture.configuration.section.compressedagriculture.common.toml": "Compressed Agriculture Configs",
@@ -31,5 +33,9 @@
   "compressedagriculture.configuration.items": "Item List",
   "compressedagriculture.configuration.logDirtBlock": "Log Dirt Block",
   "compressedagriculture.configuration.magicNumberIntroduction": "Magic Number Text",
-  "compressedagriculture.configuration.magicNumber": "Magic Number"
+  "compressedagriculture.configuration.magicNumber": "Magic Number",
+
+  "gui.compressedagriculture.level": "L%s",
+  "gui.compressedagriculture.per_slot": "%s/slot",
+  "gui.compressedagriculture.exact_count": "%s / %s"
 }

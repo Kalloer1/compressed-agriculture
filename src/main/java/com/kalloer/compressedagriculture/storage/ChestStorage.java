@@ -25,6 +25,12 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>分配策略与 ticket 02 的 {@code FakeChest} 一致：同物品优先同槽，不够再用空槽，仍不够就整条失败且不留部分预留。
  *
+ * <p><b>不变量：{@code slotItems[i] == null} ⇔ 该格为空 ⇔ 有效数量为 0。</b>「有效数量」一律指
+ * {@link #normalizedCountInSlot}：{@code slotItems[i] == null} 时它就是 0，与 {@code slotCounts[i]} 里残留什么无关。
+ * 反过来「{@code slotItems[i] != null} 而 {@code slotCounts[i] == 0}」只是未归一化的中间态（例如直接改过的存档），
+ * 有效数量同样是 0。所有读计数的外部代码都应走 {@link #normalizedCountInSlot}，别直接读 {@code slotCounts}——
+ * 后者对空格没有保证。
+ *
  * <p>NBT 读写也放在本类：{@link CompoundTag} 不需要 bootstrap，所以存档格式能脱离游戏验证。
  */
 public final class ChestStorage implements ChestTarget {
@@ -70,10 +76,31 @@ public final class ChestStorage implements ChestTarget {
         return this.slotItems[slot];
     }
 
-    /** 该格已存内容的数量，空格返回 0。 */
+    /**
+     * 该格已存内容的<b>原始</b>计数（{@code slotCounts[slot]}）。
+     *
+     * <p>只给存档、调试和本类的内部分配逻辑用：{@code slotItems[slot] == null} 时这里可能还残留非 0 值，
+     * 所以「这格有多少」一律读 {@link #normalizedCountInSlot}。
+     */
     public long countInSlot(int slot) {
         checkSlot(slot);
         return this.slotCounts[slot];
+    }
+
+    /**
+     * 该格的归一化数量：{@code slotItems[slot] == null} 时恒为 0，否则等于 {@code slotCounts[slot]}。
+     *
+     * <p>这是对外唯一的「这格有多少」入口。直接用 {@link #countInSlot} 判断空/满会在「物品为 null 但计数残留」时
+     * 报出错误的数字（漏斗据此以为插得进去，于是每 tick 空转）。越界槽位返回 0，与其他容器 API 的宽容语义一致。
+     */
+    public long normalizedCountInSlot(int slot) {
+        if (slot < 0 || slot >= SLOT_COUNT) {
+            return 0L;
+        }
+        if (this.slotItems[slot] == null) {
+            return 0L;
+        }
+        return Math.max(0L, this.slotCounts[slot]);
     }
 
     /** 已存内容中该物品的总数（不含未提交的预留）。 */
@@ -184,6 +211,45 @@ public final class ChestStorage implements ChestTarget {
             this.slotCounts[slot] = left;
         }
         return taken;
+    }
+
+    /**
+     * 往 {@code slot} 放进最多 {@code amount} 个 {@code itemId}，返回实际放进量（ticket 08 的界面放入）。
+     *
+     * <p>与 {@link #extract} 对称，也是<b>按槽位写</b>：界面上的点击永远指向某一格，所以不能让货仓自己挑槽
+     * （{@link #tryReserve} 会从第 0 格开始扫，玩家点第 5 格、物品却进了第 1 格）。
+     *
+     * <p>规则：
+     * <ul>
+     *   <li>有效数量为 0 的格（含 {@code slotItems[i] != null} 但计数残留 0 的归一化情形）：接受任何物品，写入物品身份；</li>
+     *   <li>已有同物品的格：只能加到 {@link #capacityPerSlot()}；</li>
+     *   <li>已有别的物品：返回 0——一格一种物品；</li>
+     *   <li>越界槽位、非正数量：返回 0 而不抛异常，理由同 {@link #extract}（槽位号来自客户端的点击包）。</li>
+     * </ul>
+     *
+     * <p>不碰预留：本方法只用于「货仓已经稳定」的场景（界面点击、单测），{@code settle} 的写入仍走
+     * {@link #tryReserve} / {@link #commit()}。
+     */
+    public long insert(int slot, ResourceLocation itemId, long amount) {
+        Objects.requireNonNull(itemId, "itemId");
+        if (slot < 0 || slot >= SLOT_COUNT || amount <= 0L) {
+            return 0L;
+        }
+
+        long stored = normalizedCountInSlot(slot);
+        if (stored > 0L && !itemId.equals(this.slotItems[slot])) {
+            return 0L;
+        }
+
+        long free = capacityPerSlot() - stored;
+        if (free <= 0L) {
+            return 0L;
+        }
+
+        long inserted = Math.min(amount, free);
+        this.slotItems[slot] = itemId;
+        this.slotCounts[slot] = stored + inserted;
+        return inserted;
     }
 
     @Override

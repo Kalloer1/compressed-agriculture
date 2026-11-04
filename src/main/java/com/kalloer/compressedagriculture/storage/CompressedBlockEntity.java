@@ -21,7 +21,8 @@ import net.minecraft.world.level.block.state.BlockState;
  *
  * <p>分工：{@link ChestStorage} 负责数据与三阶段契约，本类负责「存档 + 改动后通知世界」。
  * 实现 {@link ChestTarget} 是为了让 {@code settle} 直接把本对象当真货仓写入；{@link #commit()} 比
- * {@link ChestStorage#commit()} 多一步 {@link #setChanged()}，否则区块卸载时改动会丢。
+ * {@link ChestStorage#commit()} 多一步「标脏 + 发包」（{@link #changedAndSync()}），否则区块卸载时改动会丢，
+ * 开着界面的玩家也看不到计数变化。
  *
  * <p>1.21.1 的序列化签名是 {@code saveAdditional(CompoundTag, HolderLookup.Provider)} /
  * {@code loadAdditional(CompoundTag, HolderLookup.Provider)}。
@@ -48,10 +49,20 @@ public class CompressedBlockEntity extends BlockEntity implements ChestTarget {
         return this.storage.tryReserve(itemId, amount);
     }
 
+    /**
+     * 三阶段契约的落点：写进货仓，并把改动推给客户端。
+     *
+     * <p><b>插入路径也走这里</b>（收获 {@code settle(...)} → {@code ChestTarget.commit()}、漏斗
+     * {@code CompressedItemHandler.insertItem} → 本方法）。所以不能只 {@code setChanged()}：那只标脏存档、
+     * 不发包，玩家开着界面等上方作物收获、或让漏斗往里塞东西时，格子上的计数会一直停在旧值，必须重开界面才刷新。
+     * 取出路径（菜单 {@code extract}、漏斗抽出）本来就是 {@link #changedAndSync()}，两条路现在一致。
+     *
+     * <p>代价是每次插入一个整份货仓数据的增量包；按现有插入频率（一次收获/一次漏斗操作一批）可以接受。
+     */
     @Override
     public void commit() {
         this.storage.commit();
-        setChanged();
+        changedAndSync();
     }
 
     @Override
@@ -76,7 +87,7 @@ public class CompressedBlockEntity extends BlockEntity implements ChestTarget {
         return saveWithoutMetadata(registries);
     }
 
-    /** 方块已加载后再改内容时（界面取出）走这条增量包，靠 {@link #changedAndSync} 触发。 */
+    /** 方块已加载后再改内容时（界面取出 / 收获 / 漏斗插入）走这条增量包，靠 {@link #changedAndSync} 触发。 */
     @Nullable
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
@@ -86,7 +97,8 @@ public class CompressedBlockEntity extends BlockEntity implements ChestTarget {
     /**
      * 内容被改动后调：标脏存档，并把整份货仓数据推给客户端。
      *
-     * <p>{@link #setChanged()} 只标脏区块，不发包；界面上取走物品后客户端要靠这一下刷新计数，否则显示会停在旧值。
+     * <p>{@link #setChanged()} 只标脏区块，不发包；客户端要靠这一下刷新界面上的计数，否则显示会停在旧值。
+     * 取出（菜单 {@code extract}）与插入（{@link #commit()}）两条路都调本方法。
      */
     public void changedAndSync() {
         setChanged();

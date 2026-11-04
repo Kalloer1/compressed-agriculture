@@ -1,0 +1,41 @@
+{
+  "itemGroup.compressedagriculture": "压缩农业",
+
+  "block.compressedagriculture.compressed_dirt_1": "压缩泥土（1 级）",
+  "block.compressedagriculture.compressed_dirt_2": "压缩泥土（2 级）",
+  "block.compressedagriculture.compressed_dirt_3": "压缩泥土（3 级）",
+  "block.compressedagriculture.compressed_dirt_4": "压缩泥土（4 级）",
+  "block.compressedagriculture.compressed_dirt_5": "压缩泥土（5 级）",
+  "block.compressedagriculture.compressed_dirt_6": "压缩泥土（6 级）",
+  "block.compressedagriculture.compressed_dirt_7": "压缩泥土（7 级）",
+  "block.compressedagriculture.compressed_dirt_8": "压缩泥土（8 级）",
+  "block.compressedagriculture.compressed_dirt_9": "压缩泥土（9 级）",
+  "block.compressedagriculture.compressed_farmland_1": "压缩耕地（1 级）",
+  "block.compressedagriculture.compressed_farmland_2": "压缩耕地（2 级）",
+  "block.compressedagriculture.compressed_farmland_3": "压缩耕地（3 级）",
+  "block.compressedagriculture.compressed_farmland_4": "压缩耕地（4 级）",
+  "block.compressedagriculture.compressed_farmland_5": "压缩耕地（5 级）",
+  "block.compressedagriculture.compressed_farmland_6": "压缩耕地（6 级）",
+  "block.compressedagriculture.compressed_farmland_7": "压缩耕地（7 级）",
+  "block.compressedagriculture.compressed_farmland_8": "压缩耕地（8 级）",
+  "block.compressedagriculture.compressed_farmland_9": "压缩耕地（9 级）",
+
+  "container.compressedagriculture.compressed_chest": "压缩货仓",
+
+  "jei.compressedagriculture.compressed_upgrade": "压缩方块升级",
+  "jei.compressedagriculture.compressed_expansion": "压缩货仓扩容",
+  "jei.compressedagriculture.compressed_expansion.capacity": "每格堆叠上限：%s ～ %s（每加 1 个箱子 +64）",
+  "jei.compressedagriculture.compressed_expansion.chests": "任意数量的箱子——每个箱子使货仓档位 +1（至少 1 个，最多 %s 组 × 64）",
+
+  "compressedagriculture.configuration.title": "压缩农业配置",
+  "compressedagriculture.configuration.section.compressedagriculture.common.toml": "压缩农业配置",
+  "compressedagriculture.configuration.section.compressedagriculture.common.toml.title": "压缩农业配置",
+  "compressedagriculture.configuration.items": "物品列表",
+  "compressedagriculture.configuration.logDirtBlock": "记录泥土方块日志",
+  "compressedagriculture.configuration.magicNumberIntroduction": "魔法数字说明文本",
+  "compressedagriculture.configuration.magicNumber": "魔法数字",
+
+  "gui.compressedagriculture.level": "L%s",
+  "gui.compressedagriculture.per_slot": "%s/格",
+  "gui.compressedagriculture.exact_count": "%s / %s"
+}
