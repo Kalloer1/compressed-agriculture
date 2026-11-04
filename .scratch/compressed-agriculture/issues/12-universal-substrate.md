@@ -29,7 +29,9 @@ default TriState canSustainPlant(BlockState state, BlockGetter level, BlockPos s
 
 | 植物 | 位置 | 被绕过的原版检查 |
 |---|---|---|
-| `CropBlock`（含 `NetherWartBlock`、`PitcherCropBlock`） | `CropBlock.canSurvive` 第一行 | `hasSufficientLight`（光照 ≥ 8） |
+| `CropBlock`（本类） | `CropBlock.canSurvive` 第一行 | `hasSufficientLight`（光照 ≥ 8）**和** `mayPlaceOn` |
+| `NetherWartBlock`（`extends BushBlock`，**不是** `CropBlock` 子类） | `BushBlock.canSurvive` 第一行 | 自己那份 `mayPlaceOn`（只认 `soul_sand`） |
+| `PitcherCropBlock`（`extends DoublePlantBlock` → `BushBlock`） | `BushBlock.canSurvive` 第一行 | 自己那份 `mayPlaceOn`（`is(Blocks.FARMLAND)`） |
 | `SugarCaneBlock` | `SugarCaneBlock.canSurvive` 第一行 | 下方必须是 `#dirt`/`#sand` + **相邻有水** |
 | `CactusBlock` | 侧面检查**之后** | 下方必须是沙子/仙人掌 |
 | `BambooStalkBlock` | `canSurvive` 与 `getStateForPlacement` | `#bamboo_plantable_on` |
@@ -48,13 +50,15 @@ default TriState canSustainPlant(BlockState state, BlockGetter level, BlockPos s
   - `mixin/PitcherCropBlockMixin.java`（如果整个文件只做 `mayPlaceOn`，整文件删除并从 `compressedagriculture.mixins.json` 摘掉）
   - `mixin/StemBlockMixin.java` 里 `mayPlaceOn` 那部分（保留瓜类自动收获逻辑与 `StemBlockAccessor`）
 - [ ] **保留** `CropBlockMixin` 里两个 `getGrowthSpeed` 的 `@Redirect`：`CropBlock.getGrowthSpeed` 读的是 `blockstate.is(Blocks.FARMLAND)`，**不走 `canSustainPlant`**，删了作物在压缩耕地上会按 3.0 慢速生长
+- [ ] `data/compressedagriculture/tags/block/compressible_crops.json` 的 `values` 里加一行 `"minecraft:nether_wart"`（保留原有的 `"#minecraft:crops"`）——`NetherWartBlock` 不是 `CropBlock` 子类，不加这行它长熟后不结算
 - [ ] 新增 GameTest `block/UniversalSubstrateGameTest.java`，至少覆盖：
   - 下界疣能种在 1 级压缩耕地上且不弹掉；随机刻长到 age 3 后货仓里出现 9 的倍数的下界疣、方块回到 age 0（验证与 `CropModule` 的闭环）
   - 蘑菇能种在 1 级压缩耕地上、白天光照下**不**弹掉（验证光照与满形状两道都被绕过）
   - 甘蔗能种在**没有水**的 1 级压缩耕地上且存活
   - 仙人掌在压缩耕地上、**侧面贴着另一个压缩方块时仍然弹掉**（验证侧面检查未被绕过）
   - 把某个方块临时加进禁种表后它种不上（可选；若 GameTest 里改标签成本高，改为在报告里说明未覆盖）
-- [ ] `docs/adr/0019-universal-substrate.md`：新 ADR，记录「压缩耕地对所有植物放行」这条决策，含上面「关键源码事实」表、两个副作用、禁种表逃生口、以及 `#minecraft:dirt` 为什么仍然必须保留
+- [ ] `docs/adr/0020-universal-substrate.md`：新 ADR，记录「压缩耕地对所有植物放行」这条决策，含上面「关键源码事实」表、两个副作用、禁种表逃生口、以及 `#minecraft:dirt` 为什么仍然必须保留
+  （票里原先写的是 `0019`，但 `docs/adr/0019-break-keeps-chest-on-item.md` 已存在，所以实际落到 `0020`）
 - [ ] `docs/adr/0010-...`：补一句「dirt 标签的保留理由已从『瓜类种植』变成『瓜类果实落位』（`StemBlock.java:93` 不读 `canSustainPlant`）」
 - [ ] `GLOSSARY.md` 新增两个词：**通用地基**、**禁种表**（见 ticket 11 之后的术语表；措辞见下）
 - [ ] `README.md` 玩法表补一行「压缩耕地 = 通用地基，什么都能种」
@@ -78,6 +82,7 @@ default TriState canSustainPlant(BlockState state, BlockGetter level, BlockPos s
 
 ## 备注
 
+- **下界疣的闭环需要一行数据，不是零专用代码**：`NetherWartBlock` 是 `extends BushBlock`、**不是** `CropBlock` 子类，原版 `#minecraft:crops` 里也没有 `minecraft:nether_wart`，所以 `CropModule` 默认不认它（只结算 `#compressedagriculture:compressible_crops` 里的方块或 `CropBlock` 子类）。要让它「长熟 → 结算」，必须在 `data/compressedagriculture/tags/block/compressible_crops.json` 的 `values` 里加一行 `"minecraft:nether_wart"`（保留原有的 `"#minecraft:crops"`）。除此之外不需要任何 Java：`CompressibleCrops.isMature` 会回退到「AGE 取到最大值」，`resetToSeedling` 会回退到「AGE 置 0」，`NetherWartBlock.randomTick` 本来就 fire `CropGrowEvent.Post`。
 - 只 override `canSustainPlant`，**不要**去实现 `IPlantable` 或 `canSustainPlant` 之外的地基接口。
 - 不要动 `CompressedFarmlandBlock` 的 15/16 形状（`SHAPE` 同时用于碰撞盒）；蘑菇靠 `canSustainPlant` 绕过 `isSolidRender`，不需要改形状。
 - 如果 worker 在实机上发现某个原版植物因为 `canSustainPlant` 返回 TRUE 而出现明显崩坏（例如花在耕地上立刻消失），**先记进报告、不要私自改回 DEFAULT**，由主会话决定是否加进禁种表。

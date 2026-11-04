@@ -18,7 +18,7 @@ Minecraft **1.21.1** / **NeoForge 21.1.235**。
 
 ## 支持的收获
 
-- **普通作物**：小麦 / 胡萝卜 / 马铃薯 / 甜菜 / 瓶子草，以及任何在 `#compressedagriculture:compressible_crops` 里的方块
+- **普通作物**：小麦 / 胡萝卜 / 马铃薯 / 甜菜 / 瓶子草 / 下界疣，以及任何在 `#compressedagriculture:compressible_crops` 里的方块
 - **树木**：树苗长成真实的树 → 连通性枚举 → 逐方块取真实掉落 → 整棵拆除 → 原地回填树苗
 - **瓜类**：西瓜 / 南瓜茎，果实直接进货仓、茎退回 0 龄
 - **蘑菇**：骨粉催成蘑菇树 → 整棵拆掉 → 回填同种蘑菇；手动挖蘑菇也收
@@ -27,7 +27,7 @@ Minecraft **1.21.1** / **NeoForge 21.1.235**。
 
 | 标签 | 默认 |
 |---|---|
-| `#compressedagriculture:compressible_crops` | `#minecraft:crops` |
+| `#compressedagriculture:compressible_crops` | `#minecraft:crops` + 下界疣 |
 | `#compressedagriculture:compressible_saplings` | `#minecraft:saplings` |
 | `#compressedagriculture:mushrooms` | 红蘑菇、褐蘑菇 |
 | `#compressedagriculture:melon_like_stems` / `pumpkin_like_stems` | 空（接模组茎） |

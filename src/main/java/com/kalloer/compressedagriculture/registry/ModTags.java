@@ -17,7 +17,12 @@ public final class ModTags {
 
     /** 方块标签。 */
     public static final class Blocks {
-        /** 普通作物模块认的作物集合，数据层默认引用 {@code #minecraft:crops}。 */
+        /**
+         * 普通作物模块认的作物集合，数据层默认是 {@code #minecraft:crops} + {@code minecraft:nether_wart}。
+         *
+         * <p>下界疣必须显式列出：它 {@code extends BushBlock} 而**不是** {@code CropBlock} 子类，原版
+         * {@code #minecraft:crops} 里也没有它，所以 {@code CropModule} 的 {@code instanceof CropBlock} 回退路径也接不住它。
+         */
         public static final TagKey<Block> COMPRESSIBLE_CROPS = create("compressible_crops");
 
         /**

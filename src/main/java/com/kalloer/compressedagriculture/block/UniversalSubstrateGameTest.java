@@ -2,12 +2,16 @@ package com.kalloer.compressedagriculture.block;
 
 import com.kalloer.compressedagriculture.CompressedAgriculture;
 import com.kalloer.compressedagriculture.registry.ModBlocks;
+import com.kalloer.compressedagriculture.storage.CompressedBlockEntity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NetherWartBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,37 +33,52 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public class UniversalSubstrateGameTest {
     private static final String TEMPLATE = "empty";
+    private static final ResourceLocation NETHER_WART = BuiltInRegistries.ITEM.getKey(Items.NETHER_WART);
 
     /**
-     * 下界疣：原版 {@code NetherWartBlock.mayPlaceOn} 只认 {@code soul_sand}，现在压缩耕地也认，而且能长到 3 龄。
+     * 下界疣：原版 {@code NetherWartBlock.mayPlaceOn} 只认 {@code soul_sand}，现在压缩耕地也认；长到 3 龄后
+     * 由 {@code CropModule} 结算进货仓、自己退回 0 龄。
      *
-     * <p><b>覆盖不到「长熟 → 结算」这条闭环</b>：{@code CropModule} 只结算
-     * {@code #compressedagriculture:compressible_crops} 里的方块或 {@code CropBlock} 子类，下界疣两者都不是
-     * （原版 {@code #minecraft:crops} 不含 {@code nether_wart}），所以 3 龄后停在原地、不进仓。
-     * 本用例只验「能种、能长」，闭环留给「下界疣算不算可压缩作物」这个单独的决定。
+     * <p>这条闭环能成立不只靠 {@code canSustainPlant}：{@code NetherWartBlock} 不是 {@code CropBlock} 子类
+     * （它 {@code extends BushBlock}），原版 {@code #minecraft:crops} 里也没有 {@code minecraft:nether_wart}，
+     * 所以 {@code data/compressedagriculture/tags/block/compressible_crops.json} 里必须显式列出它，
+     * {@code CropModule} 才认。不需要任何 Java：{@code CompressibleCrops.isMature} 回退到「AGE 取到最大值」，
+     * {@code resetToSeedling} 回退到「AGE 置 0」，{@code NetherWartBlock.randomTick} 本来就 fire
+     * {@code CropGrowEvent.Post}。
+     *
+     * <p>驱动方式：直接调 {@code BlockState.randomTick} 从 0 龄开始反复长，直到货仓里出现东西。
+     * 每龄 1/10 概率，0 → 3 平均约 30 次，200 次走不完的概率低于 1e-9。不先把 AGE 设成 3 再触发随机刻：
+     * {@code NetherWartBlock.randomTick} 在 {@code AGE == 3} 时什么都不做，那样根本不会 fire 事件。
      */
     @GameTest(template = TEMPLATE)
-    public void netherWartSurvivesAndGrows(GameTestHelper helper) {
+    public void netherWartGrowsAndSettles(GameTestHelper helper) {
         BlockPos farmlandPos = new BlockPos(1, 1, 1);
         helper.setBlock(farmlandPos, ModBlocks.COMPRESSED_FARMLAND.get(0).get());
         BlockPos wartPos = farmlandPos.above();
         helper.setBlock(wartPos, Blocks.NETHER_WART.defaultBlockState());
 
         ServerLevel level = helper.getLevel();
-        BlockPos absolute = helper.absolutePos(wartPos);
-        helper.assertTrue(level.getBlockState(absolute).canSurvive(level, absolute),
+        BlockPos absoluteWart = helper.absolutePos(wartPos);
+        CompressedBlockEntity chest = (CompressedBlockEntity) level.getBlockEntity(helper.absolutePos(farmlandPos));
+        helper.assertTrue(chest != null, "expected a chest on the compressed farmland");
+
+        helper.assertTrue(level.getBlockState(absoluteWart).canSurvive(level, absoluteWart),
                 "expected nether wart to survive on compressed farmland, vanilla only accepts soul sand");
 
-        // NetherWartBlock.randomTick 每龄 1/10 概率：0 → 3 平均约 30 次，200 次长不满的概率低于 1e-9
-        for (int attempt = 0; attempt < 200
-                && level.getBlockState(absolute).getValue(NetherWartBlock.AGE) < NetherWartBlock.MAX_AGE; attempt++) {
-            level.getBlockState(absolute).randomTick(level, absolute, level.getRandom());
+        for (int attempt = 0; attempt < 200 && chest.storage().amountOf(NETHER_WART) == 0L; attempt++) {
+            level.getBlockState(absoluteWart).randomTick(level, absoluteWart, level.getRandom());
         }
 
-        BlockState grown = level.getBlockState(absolute);
-        helper.assertTrue(grown.is(Blocks.NETHER_WART), "expected the nether wart to stay, got " + grown);
-        helper.assertTrue(grown.getValue(NetherWartBlock.AGE) == NetherWartBlock.MAX_AGE,
-                "expected the nether wart to reach AGE 3 on compressed farmland, got " + grown);
+        long settled = chest.storage().amountOf(NETHER_WART);
+        helper.assertTrue(settled > 0L,
+                "expected the mature nether wart to be settled into the chest, got " + settled);
+        helper.assertTrue(settled % 9L == 0L,
+                "expected a multiple of 9 (9^1 on level-1 farmland), got " + settled);
+
+        BlockState after = level.getBlockState(absoluteWart);
+        helper.assertTrue(after.is(Blocks.NETHER_WART), "expected the nether wart to stay, got " + after);
+        helper.assertTrue(after.getValue(NetherWartBlock.AGE) == 0,
+                "expected the nether wart to be reset to AGE 0 after settlement, got " + after);
         helper.succeed();
     }
 
