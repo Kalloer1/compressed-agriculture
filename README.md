@@ -69,4 +69,4 @@ JAVA_HOME=D:/tools/jdk21 GRADLE_USER_HOME=E:/mods/.gradle-home ./gradlew build
 
 ## 授权
 
-All Rights Reserved。映射名来自 Mojang 官方映射，见 [Mojang.md](https://github.com/NeoForged/NeoForm/blob/main/Mojang.md)。
+LGPL-3.0-or-later，全文见 [LICENSE](LICENSE)。映射名来自 Mojang 官方映射，见 [Mojang.md](https://github.com/NeoForged/NeoForm/blob/main/Mojang.md)。
